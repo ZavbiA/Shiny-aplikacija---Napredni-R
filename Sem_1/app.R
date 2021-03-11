@@ -4,16 +4,39 @@
 
 library(shiny)
 library(shinydashboard)
+library(dplyr)
 
 #----------------------------
 #------- import data --------
 #----------------------------
 
 # COVID
-
+# Število umrlih glede na starostno skupino
 # Stats
 # Source: https://github.com/sledilnik/data/blob/master/csv/stats.csv
-data_age = read.csv("https://raw.githubusercontent.com/sledilnik/data/master/csv/stats.csv")
+data_all = read.csv("https://raw.githubusercontent.com/sledilnik/data/master/csv/stats.csv")
+
+data_age = data_all %>% 
+    select('deceased.0.4.todate', 'deceased.5.14.todate', 'deceased.15.24.todate',
+           'deceased.25.34.todate', 'deceased.35.44.todate', 'deceased.45.54.todate',
+           'deceased.55.64.todate', 'deceased.65.74.todate', 'deceased.75.84.todate',
+           'deceased.85..todate', 'deceased.todate', 'date')
+data_age$`0-14` <- data_age$deceased.0.4.todate + data_age$deceased.5.14.todate
+data_age = data_age %>% 
+    select('0-14', 'deceased.15.24.todate',
+           'deceased.25.34.todate', 'deceased.35.44.todate', 'deceased.45.54.todate',
+           'deceased.55.64.todate', 'deceased.65.74.todate', 'deceased.75.84.todate',
+           'deceased.85..todate', 'deceased.todate', 'date')
+colnames(data_age) <- c('0-14',
+                        '15-24',
+                        '25-34',
+                        '35-44',
+                        '45-54',
+                        '55-64',
+                        '65-74',
+                        '75-84',
+                        '85+')
+
 
 # By region
 # Active: https://github.com/sledilnik/data/blob/master/csv/region-active.csv
@@ -23,13 +46,20 @@ data_regions = read.csv("https://raw.githubusercontent.com/sledilnik/data/master
 data_regions$date <- as.Date(data_regions$date)
 
 # Population
+# Absolutno število ljudi v starostni skupini
 # SURS https://www.stat.si/StatWeb/Field/Index/17/104
 data_pop_dist = read.csv("Sem_1/data_pop_dist.csv")
-# Ohranim samo zanimive stolpce, spremenim imena & odštejem, da dobim zaprto skupino
-data_pop_dist <- data_pop_dist[,c(2,4)]
-colnames(data_pop_dist) <- c("Starost", "Delez")
-data_pop_dist$Starost <- c("0-14", "15-64", "65-79", "80+")
-data_pop_dist[3,2] <- data_pop_dist[3,2] - data_pop_dist[4,2]
+data_pop$`0-14` <- 316657
+data_pop$`15-24` <- 197116
+data_pop$`25-34` <- 247791
+data_pop$`35-44` <- 312259
+data_pop$`45-54` <- 301052
+data_pop$`55-64` <- 295396
+data_pop$`65-74` <- 236812
+data_pop$`75-84` <- 138009
+data_pop$`85+` <- 55034
+								
+
 
 #----------------------------
 #------  sidebar  -----------
