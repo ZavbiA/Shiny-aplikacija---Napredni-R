@@ -5,6 +5,7 @@
 library(shiny)
 library(shinydashboard)
 library(dplyr)
+library(ggplot2)
 
 #----------------------------
 #------- import data --------
@@ -77,7 +78,8 @@ data_regions$date <- as.Date(data_regions$date)
 # Population
 # Absolutno število ljudi v starostni skupini
 # SURS https://www.stat.si/StatWeb/Field/Index/17/104
-data_pop_dist = read.csv("Sem_1/data_pop_dist.csv") #Od tukaj podatki
+#data_pop_dist = read.csv("Sem_1/data_pop_dist.csv")
+data_pop_dist = read.csv("data_pop_dist.csv")
 # Ročno pregledani (hitreje)
 data_pop <- data.frame(matrix())
 data_pop$`0-14` <- 316657
@@ -105,6 +107,19 @@ data_incidenca_rel$`65-74` <- data_incidenca$`65-74` / data_pop$`65-74`
 data_incidenca_rel$`75-84` <- data_incidenca$`75-84` / data_pop$`75-84`
 data_incidenca_rel$`85+`   <- data_incidenca$`85+`   / data_pop$`85+`
 data_incidenca_rel <- data_incidenca_rel[,-1]
+
+data_smrt_rel <- data.frame(matrix(nrow = dim(data_smrt)[1], ncol = 1))
+data_smrt_rel$`0-14`  <- data_smrt$`0-14`  / data_pop$`0-14`
+data_smrt_rel$`15-24` <- data_smrt$`15-24` / data_pop$`15-24`
+data_smrt_rel$`25-34` <- data_smrt$`25-34` / data_pop$`25-34`
+data_smrt_rel$`35-44` <- data_smrt$`35-44` / data_pop$`35-44`
+data_smrt_rel$`45-54` <- data_smrt$`45-54` / data_pop$`45-54`
+data_smrt_rel$`55-64` <- data_smrt$`55-64` / data_pop$`55-64`
+data_smrt_rel$`65-74` <- data_smrt$`65-74` / data_pop$`65-74`
+data_smrt_rel$`75-84` <- data_smrt$`75-84` / data_pop$`75-84`
+data_smrt_rel$`85+`   <- data_smrt$`85+`   / data_pop$`85+`
+data_smrt_rel <- data_incidenca_rel[,-1]
+
 #----------------------------
 #------  sidebar  -----------
 #----------------------------
@@ -168,8 +183,8 @@ body <- dashboardBody(
                         sliderInput(
                             inputId = "num",
                             label = "Datum",
-                            value = '2020-02-24', # Ali brez ''?
-                            min = '2020-02-24',
+                            value = as.Date('2020-02-24'), # Ali brez ''?
+                            min = as.Date('2020-02-24'),
                             max = Sys.Date(), # Ali deluje?
                             animate=TRUE,
                             sep =""
@@ -342,56 +357,60 @@ shinyApp(ui = ui,
              #     )
              # })
              
+             
              # Porazdelitev po starosti
-             data_1 <- reactive({
-                 if(!is.null(input$starVar)){
-                     if(input$starVar == "inc"){
-                         updateSliderInput(session,
-                                           inputId = "num",
-                                           value = 2016,
-                                           min = 1961, 
-                         )
-                         return(inc_starost)
-                         
-                     }else{
-                         updateSliderInput(session,
-                                           inputId = "num",
-                                           value = 2016,
-                                           min = 1985, 
-                         )
-                         return(umr_starost)
-                     }}
-             })
              
-             label_y <- reactive({
-                 if(!is.null(input$starVar)){
-                     if(input$starVar == "inc"){
-                         return("Incidenca")
-                         
-                     }else{
-                         return("Umrljivost")
-                     }}
-             })
-             
-             observeEvent(input$starVar,{
-                 print(input$starVar)
-             }
-             )
-             
-             output$grafStar<-renderPlot({
-                 if (input$num < min(as.numeric(colnames(data_1()[,-c(1)])))){
-                     a = as.character(min(as.numeric(colnames(data_1()[,-c(1)]))))
-                 }
-                 else{
-                     a = as.character(input$num)
-                 }
-                 ggplot(data = data_1(), aes(x=data_1()$Starost, y =unlist(data_1()[a])))+ 
-                     geom_col(fill='#2c7fb8') +
-                     xlab("Starostna skupina") +
-                     ylab(label_y()) +
-                     ylim(0,max(data_1()[,-c(1)])) +
-                     coord_flip()+ 
-                     theme_minimal()
-             })
+             # # Potrebno?
+             # data_starost <- reactive({
+             #     if(!is.null(input$starVar)){
+             #         if(input$starVar == "inc"){
+             #             updateSliderInput(session,
+             #                               inputId = "num",
+             #                               value = as.Date('2020-02-24'),
+             #                               min = as.Date('2020-02-24'), 
+             #             )
+             #             return(data_incidenca_rel)
+             #             
+             #         }else{
+             #             updateSliderInput(session,
+             #                               inputId = "num",
+             #                               value = as.Date('2020-02-24'),
+             #                               min = as.Date('2020-02-24'), 
+             #             )
+             #             return(data_smrt_rel)
+             #         }}
+             # })
+             # 
+             # label_y <- reactive({
+             #     if(!is.null(input$starVar)){
+             #         if(input$starVar == "inc"){
+             #             return("Incidenca")
+             #             
+             #         }else{
+             #             return("Umrljivost")
+             #         }}
+             # })
+             # 
+             # observeEvent(input$starVar,{
+             #     print(input$starVar)
+             # }
+             # )
+             # 
+             # output$grafStar<-renderPlot({
+             #     if (input$num < min(as.numeric(colnames(data_1()[,-c(1)])))){
+             #         a = as.character(min(as.numeric(colnames(data_1()[,-c(1)]))))
+             #     }
+             #     else{
+             #         a = as.character(input$num)
+             #     }
+             #     ggplot(data = data_1(), aes(x=data_1()$Starost, y =unlist(data_1()[a])))+
+             #         geom_col(fill='#2c7fb8') +
+             #         xlab("Starostna skupina") +
+             #         ylab(label_y()) +
+             #         ylim(0,max(data_1()[,-c(1)])) +
+             #         coord_flip()+
+             #         theme_minimal()
+             # })
+
              
 })
