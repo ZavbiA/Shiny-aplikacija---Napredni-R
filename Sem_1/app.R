@@ -16,18 +16,18 @@ library(dplyr)
 # Source: https://github.com/sledilnik/data/blob/master/csv/stats.csv
 data_all = read.csv("https://raw.githubusercontent.com/sledilnik/data/master/csv/stats.csv")
 
-data_age = data_all %>% 
+data_smrt = data_all %>% 
     select('deceased.0.4.todate', 'deceased.5.14.todate', 'deceased.15.24.todate',
            'deceased.25.34.todate', 'deceased.35.44.todate', 'deceased.45.54.todate',
            'deceased.55.64.todate', 'deceased.65.74.todate', 'deceased.75.84.todate',
            'deceased.85..todate', 'deceased.todate', 'date')
-data_age$`0-14` <- data_age$deceased.0.4.todate + data_age$deceased.5.14.todate
-data_age = data_age %>% 
+data_smrt$`0-14` <- data_age$deceased.0.4.todate + data_age$deceased.5.14.todate
+data_smrt = data_smrt %>% 
     select('0-14', 'deceased.15.24.todate',
            'deceased.25.34.todate', 'deceased.35.44.todate', 'deceased.45.54.todate',
            'deceased.55.64.todate', 'deceased.65.74.todate', 'deceased.75.84.todate',
            'deceased.85..todate', 'deceased.todate', 'date')
-colnames(data_age) <- c('0-14',
+colnames(data_smrt) <- c('0-14',
                         '15-24',
                         '25-34',
                         '35-44',
@@ -35,8 +35,32 @@ colnames(data_age) <- c('0-14',
                         '55-64',
                         '65-74',
                         '75-84',
-                        '85+')
+                        '85+',
+                        'Cumulative',
+                        'Date')
 
+data_incidenca = data_all %>%
+    select('age.0.4.todate', 'age.5.14.todate', 'age.15.24.todate',
+           'age.25.34.todate', 'age.35.44.todate', 'age.45.54.todate',
+           'age.55.64.todate', 'age.65.74.todate', 'age.75.84.todate',
+           'age.85..todate', 'age.todate', 'date')
+data_incidenca$`0-14` <- data_incidenca$age.0.4.todate + data_incidenca$age.5.14.todate
+data_incidenca = data_incidenca %>% 
+    select('0-14', 'age.15.24.todate',
+           'age.25.34.todate', 'age.35.44.todate', 'age.45.54.todate',
+           'age.55.64.todate', 'age.65.74.todate', 'age.75.84.todate',
+           'age.85..todate', 'age.todate', 'date')
+colnames(data_incidenca) <- c('0-14',
+                         '15-24',
+                         '25-34',
+                         '35-44',
+                         '45-54',
+                         '55-64',
+                         '65-74',
+                         '75-84',
+                         '85+',
+                         'Cumulative',
+                         'Date')
 
 # By region
 # Active: https://github.com/sledilnik/data/blob/master/csv/region-active.csv
