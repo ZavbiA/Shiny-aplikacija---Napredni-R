@@ -15,13 +15,15 @@ library(dplyr)
 # Stats
 # Source: https://github.com/sledilnik/data/blob/master/csv/stats.csv
 data_all = read.csv("https://raw.githubusercontent.com/sledilnik/data/master/csv/stats.csv")
+data_all$date <- as.Date(data_all$date)
 
+# Poberem ven smrti glede na starostno skupino
 data_smrt = data_all %>% 
     select('deceased.0.4.todate', 'deceased.5.14.todate', 'deceased.15.24.todate',
            'deceased.25.34.todate', 'deceased.35.44.todate', 'deceased.45.54.todate',
            'deceased.55.64.todate', 'deceased.65.74.todate', 'deceased.75.84.todate',
            'deceased.85..todate', 'deceased.todate', 'date')
-data_smrt$`0-14` <- data_age$deceased.0.4.todate + data_age$deceased.5.14.todate
+data_smrt$`0-14` <- data_smrt$deceased.0.4.todate + data_smrt$deceased.5.14.todate
 data_smrt = data_smrt %>% 
     select('0-14', 'deceased.15.24.todate',
            'deceased.25.34.todate', 'deceased.35.44.todate', 'deceased.45.54.todate',
@@ -38,7 +40,9 @@ colnames(data_smrt) <- c('0-14',
                         '85+',
                         'Cumulative',
                         'Date')
+data_smrt[is.na(data_smrt)] <- 0
 
+# Poberem ven potrjene primere glede na starostno skupino
 data_incidenca = data_all %>%
     select('age.0.4.todate', 'age.5.14.todate', 'age.15.24.todate',
            'age.25.34.todate', 'age.35.44.todate', 'age.45.54.todate',
@@ -61,6 +65,7 @@ colnames(data_incidenca) <- c('0-14',
                          '85+',
                          'Cumulative',
                          'Date')
+data_incidenca[is.na(data_incidenca)] <- 0
 
 # By region
 # Active: https://github.com/sledilnik/data/blob/master/csv/region-active.csv
@@ -72,7 +77,9 @@ data_regions$date <- as.Date(data_regions$date)
 # Population
 # Absolutno število ljudi v starostni skupini
 # SURS https://www.stat.si/StatWeb/Field/Index/17/104
-data_pop_dist = read.csv("Sem_1/data_pop_dist.csv")
+data_pop_dist = read.csv("Sem_1/data_pop_dist.csv") #Od tukaj podatki
+# Ročno pregledani (hitreje)
+data_pop <- data.frame(matrix())
 data_pop$`0-14` <- 316657
 data_pop$`15-24` <- 197116
 data_pop$`25-34` <- 247791
@@ -82,9 +89,22 @@ data_pop$`55-64` <- 295396
 data_pop$`65-74` <- 236812
 data_pop$`75-84` <- 138009
 data_pop$`85+` <- 55034
+data_pop <- data_pop[,-1]
 								
 
+# Podatki po starostnih skupinah relativno na populacijo
 
+data_incidenca_rel <- data.frame(matrix(nrow = dim(data_incidenca)[1], ncol = 1))
+data_incidenca_rel$`0-14`  <- data_incidenca$`0-14`  / data_pop$`0-14`
+data_incidenca_rel$`15-24` <- data_incidenca$`15-24` / data_pop$`15-24`
+data_incidenca_rel$`25-34` <- data_incidenca$`25-34` / data_pop$`25-34`
+data_incidenca_rel$`35-44` <- data_incidenca$`35-44` / data_pop$`35-44`
+data_incidenca_rel$`45-54` <- data_incidenca$`45-54` / data_pop$`45-54`
+data_incidenca_rel$`55-64` <- data_incidenca$`55-64` / data_pop$`55-64`
+data_incidenca_rel$`65-74` <- data_incidenca$`65-74` / data_pop$`65-74`
+data_incidenca_rel$`75-84` <- data_incidenca$`75-84` / data_pop$`75-84`
+data_incidenca_rel$`85+`   <- data_incidenca$`85+`   / data_pop$`85+`
+data_incidenca_rel <- data_incidenca_rel[,-1]
 #----------------------------
 #------  sidebar  -----------
 #----------------------------
@@ -136,29 +156,29 @@ body <- dashboardBody(
                     h2(align="center", "Umrljivost po starostnih skupinah relativno na populacijo")
                     
                 ),
-                # fluidRow(
-                #     box(
-                #         status = "primary", width=4,
-                #         selectInput(
-                #             "starVar", 
-                #             "Izbira prikazane spremenljivke:",
-                #             c("Incidenca" = "inc",
-                #               "Umrljivost" = "umr")
-                #         ),
-                #         sliderInput(
-                #             inputId = "num",
-                #             label = "Leto",
-                #             value = 1985,
-                #             min = 1985,
-                #             max = 2016,
-                #             animate=TRUE,
-                #             sep ="" 
-                #         )
-                #     ),
-                #     box(
-                #         status = "primary", width=8,
-                #         plotOutput(outputId = "grafStar"))
-                # ),
+                fluidRow(
+                    box(
+                        status = "primary", width=4,
+                        selectInput(
+                            "starVar",
+                            "Izbira relativne statistike:",
+                            c("Relativna incidenca" = "inc",
+                              "Relativna umrljivost" = "umr")
+                        ),
+                        sliderInput(
+                            inputId = "num",
+                            label = "Datum",
+                            value = '2020-02-24', # Ali brez ''?
+                            min = '2020-02-24',
+                            max = Sys.Date(), # Ali deluje?
+                            animate=TRUE,
+                            sep =""
+                        )
+                    ),
+                    box(
+                        status = "primary", width=8,
+                        plotOutput(outputId = "grafStar"))
+                ),
                 fluidRow(
                     box(
                         width = 12, status = "primary",
@@ -321,5 +341,57 @@ shinyApp(ui = ui,
              #                 #kje zacnemo, ko odpremo aplikacijo
              #     )
              # })
+             
+             # Porazdelitev po starosti
+             data_1 <- reactive({
+                 if(!is.null(input$starVar)){
+                     if(input$starVar == "inc"){
+                         updateSliderInput(session,
+                                           inputId = "num",
+                                           value = 2016,
+                                           min = 1961, 
+                         )
+                         return(inc_starost)
+                         
+                     }else{
+                         updateSliderInput(session,
+                                           inputId = "num",
+                                           value = 2016,
+                                           min = 1985, 
+                         )
+                         return(umr_starost)
+                     }}
+             })
+             
+             label_y <- reactive({
+                 if(!is.null(input$starVar)){
+                     if(input$starVar == "inc"){
+                         return("Incidenca")
+                         
+                     }else{
+                         return("Umrljivost")
+                     }}
+             })
+             
+             observeEvent(input$starVar,{
+                 print(input$starVar)
+             }
+             )
+             
+             output$grafStar<-renderPlot({
+                 if (input$num < min(as.numeric(colnames(data_1()[,-c(1)])))){
+                     a = as.character(min(as.numeric(colnames(data_1()[,-c(1)]))))
+                 }
+                 else{
+                     a = as.character(input$num)
+                 }
+                 ggplot(data = data_1(), aes(x=data_1()$Starost, y =unlist(data_1()[a])))+ 
+                     geom_col(fill='#2c7fb8') +
+                     xlab("Starostna skupina") +
+                     ylab(label_y()) +
+                     ylim(0,max(data_1()[,-c(1)])) +
+                     coord_flip()+ 
+                     theme_minimal()
+             })
              
 })
