@@ -196,10 +196,9 @@ body <- dashboardBody(
                             label = "Datum:",
                             value = as.Date('2020-02-24',"%Y-%m-%d"),
                             min = as.Date('2020-02-24',"%Y-%m-%d"),
-                            max = as.Date('2021-03-10',"%Y-%m-%d"), # Alternativa: Sys.Date()
-                            timeFormat = "%Y-%m-%d"
-                            #animate=TRUE,
-                            #sep =""
+                            max = as.Date(Sys.Date()-7), # Alternativa: Sys.Date()
+                            timeFormat = "%Y-%m-%d",
+                            animate = animationOptions(interval = 200)
                         )
                     ),
                     box(
@@ -424,22 +423,4 @@ shinyApp(ui = ui,
 
              
 })
-
-
-## GRAF ZA STAROSTNE SKUPINE V GGPLOTU
-# 
-# barplot(as.matrix(data_incidenca_rel[300,-10])) # to lepo deluje
-# 
-# # ?e ?eli? uporabit ggplot, je najbolje najprej preuredit podatke.
-# mydata <- data_incidenca_rel[300,-10] # uporabimo za za?etek samo eno vrstico (samo en datum)
-# novi_podatki <- melt(mydata, id=c())
-# 
-# ggplot(data = novi_podatki, aes(x=variable, y=value)) +
-#     geom_bar(stat="identity") + 
-#     xlab("starostna skupina") + 
-#     ylab("delez okuzenih") +
-#     coord_flip()
-
-
-# Test
 
