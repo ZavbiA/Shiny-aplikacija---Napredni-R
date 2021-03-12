@@ -6,6 +6,7 @@ library(shiny)
 library(shinydashboard)
 library(dplyr)
 library(ggplot2)
+library(reshape) # za funkcijo melt
 
 #----------------------------
 #------- import data --------
@@ -414,3 +415,19 @@ shinyApp(ui = ui,
 
              
 })
+
+
+## GRAF ZA STAROSTNE SKUPINE V GGPLOTU
+
+barplot(as.matrix(data_incidenca_rel[300,-10])) # to lepo deluje
+
+# Èe želiš uporabit ggplot, je najbolje najprej preuredit podatke.
+mydata <- data_incidenca_rel[300,-10] # uporabimo za zaèetek samo eno vrstico (samo en datum)
+novi_podatki <- melt(mydata, id=c())
+
+ggplot(data = novi_podatki, aes(x=variable, y=value)) +
+    geom_bar(stat="identity") + xlab("starostna skupina") + ylab("delez okuzenih")
+
+
+
+
