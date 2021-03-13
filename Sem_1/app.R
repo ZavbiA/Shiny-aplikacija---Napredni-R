@@ -80,7 +80,7 @@ data_regions$date <- as.Date(data_regions$date)
 # Absolutno število ljudi v starostni skupini
 # SURS https://www.stat.si/StatWeb/Field/Index/17/104
 #data_pop_dist = read.csv("Sem_1/data_pop_dist.csv")
-data_pop_dist = read.csv("data_pop_dist.csv")
+#data_pop_dist = read.csv("data_pop_dist.csv")
 # Ročno pregledani (hitreje)
 data_pop <- data.frame(matrix())
 data_pop$`0-14` <- 316657
@@ -161,7 +161,11 @@ body <- dashboardBody(
                 fluidRow(
                     box(
                         width = 12, status = "primary",
-                        p("Temp. text")
+                        p("V sklopu predmeta 'Napredni pristopi v programskem okolju R' sva pripravila dve različni vizualizaciji podatkov povezanih z boleznijo Covid-19.  
+                          Podatki se direktno berejo iz podatkovnega repozitorija projekta Sledilnik (link?).
+                          Prvi graf: Anja napiše svoje
+                          Drugi graf predstavlja ali delež populacije, ki je okužen ali pa kolikšen delež populacije je umrl, glede na starostne skupine.
+                          Podatke koliko ljudi v populaciji spada v katero starostno skupino sva prenesla s SURS (link).")
                     )
                 ),
                 # fluidRow(
