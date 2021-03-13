@@ -208,7 +208,7 @@ body <- dashboardBody(
                 fluidRow(
                     box(
                         width = 12, status = "primary",
-                        p("temp text")
+                        p("Graf prikazuje ali delež okuženih ali pa delež umrlih v starostni skupini glede na velikost starostne skupine v populaciji.")
                     )
                 )
         ),
