@@ -149,10 +149,6 @@ data_smrt_rel = data_smrt_rel %>%
 data_regions = read.csv("https://raw.githubusercontent.com/sledilnik/data/master/csv/region-cases.csv") # vsi podatki skupaj
 data_regions$date <- as.Date(data_regions$date)
 
-# Uvozimo število prebivalcev po regijah
-data_pop_regions <- read.csv("https://raw.githubusercontent.com/sledilnik/data/master/csv/dict-region.csv")
-data_pop_regions <- data_pop_regions[-c(14,15),] # odstranimo zadnji dve vrstici, ker ju ne rabimo
-
 # Podatki za izris zemljevida:
 gadm <- readRDS("Data/SVN.rds")
 # Da se znebimo šumnikov:
@@ -194,7 +190,17 @@ jourDate <- as.Date(jour)
 names(dataIncidenca)[2:ncol(dataIncidenca)] <- format.Date(jourDate)
 names(dataUmrljivost)[2:ncol(dataUmrljivost)] <- format.Date(jourDate)
 
-arrondi <- function(x) 10^(ceiling(log10(x))) #za racunanje na populacijo
+# Uvozimo število prebivalcev po regijah:
+data_pop_regions <- read.csv("https://raw.githubusercontent.com/sledilnik/data/master/csv/dict-region.csv")
+data_pop_regions <- data_pop_regions[-c(1,14,15),-1] # odstranimo prvo in zadnji dve vrstici, ker jih ne rabimo ter prvi stolpec s kraticami
+colnames(data_pop_regions)[1] <- "Regija"
+# Popravimo sumnike (ročno je najmanj dela):
+data_pop_regions[c(3,11,12),1] <- c("Koroska", "Goriska", "Obalno-kraska")
+# Popravimo še vrstni red, da se ujema z drugimi tabelami:
+data_pop_regions <- data_pop_regions[c(4,6,12,9,8,2,1,11,7,10,3,5),]
+
+
+arrondi <- function(x) 10^(ceiling(log10(x))) #za legendo
 
 # ---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -257,7 +263,7 @@ body <- dashboardBody(
         # STAROSTNE SKUPINE
         tabItem(tabName = "star",
                 fluidRow(
-                    h2(align="center", "Umrljivost po starostnih skupinah relativno na populacijo")
+                    h2(align="center", "Prikaz podatkov po starostnih skupinah")
                     
                 ),
                 fluidRow(
@@ -291,20 +297,19 @@ body <- dashboardBody(
         # REGIJE
         tabItem(tabName = "reg",
                 fluidRow(
-                    h2(align="center", "Prikaz podatkov po regijah")
-                    
-                ),
+                    h2(align="center", "Prikaz podatkov po regijah")),
                 fluidRow(   
                     box(status = "primary", width=4,  
-                        selectInput("choices", "Incidenca ali umrljivost ?", choices = c("Relativno število potrjenih primerov","Relativno število smrti"), selected = "Relativno število potrjenih primerov"),
+                        selectInput("choices", "", choices = c("Število novih okužb", "Število smrti"),
+                                    selected = "Število novih okužb"),
                         uiOutput("Slider"),
                         helpText("Podrobnosti za vsako regijo se izpišejo ob kliku na izbrano regijo."), 
-                        uiOutput("selection"))  ,
-                    box(status = "primary", width=8, leafletOutput("map_1", width = "100%", height = "600px")  ) ),
+                        uiOutput("selection")),
+                    box(status = "primary", width=8, leafletOutput("map_1", width = "100%", height = "600px"))),
                 fluidRow(
-                    box(
-                        width = 12, status = "primary",
-                        p("Tukaj lahko dodam kratek opis/razlago grafa.")
+                    box(width = 12, status = "primary",
+                        p("Graf privzeto prikazuje 7-dnevno incidenco na 100.000 prebivalcev po regijah.
+                          Namesto incidence lahko izberemo število smrti, poleg tega pa lahko spreminjamo tudi dolžino opazovanega obdobja.")
                     )
                 )
         )
@@ -329,37 +334,23 @@ ui <- dashboardPage(
 shinyApp(ui = ui, 
          server = function(input, output, session) {
              
-             # Zemljevid
-             dataPays <- reactive({
+             # ZEMLJEVID
+             
+             dataPays <- reactive({ # to je funkcija, ki vrača tabelo podatkov
                  if(!is.null(input$choices)){
-                     if(input$choices == "Relativno število potrjenih primerov"){
+                     if(input$choices == "Število novih okužb"){
                          return(dataIncidenca)
 
                      }else{
                          return(dataUmrljivost)
                      }}
+                 else{
+                     return(dataIncidenca) # privzeto opazujemo incidenco
+                 }
              })
 
-             # jourDate <- reactive({
-             #     if(!is.null(input$choices)){
-             #         if(input$choices == "Relativno število potrjenih primerov"){
-             #             return(jourDate)
-             # 
-             #         }else{
-             #             return(jourDate)
-             #         }}
-             #     else{ # če nič ni izbrano, je število potrjenih primerov, zato jourDate1
-             #         return(jourDate)
-             #     }
-             # })
-
-             #jour <- reactive({return(names(dataPays())[-c(1)])})
-             #jourDate <- reactive(jour())
-
-             maxTotal<- reactive(max(dataPays()%>%select_if(is.numeric), na.rm = T)
-             ) #pogleda vrednosti v tabeli Incidence/Umrljivosti, ki niso Regija in spravi najvecjo
-             minTotal<- reactive(min(dataPays()%>%select_if(is.numeric), na.rm = T)
-             ) #se minimum za legendo
+             maxTotal <- reactive(max(dataPays()[,ncol(dataPays())]/data_pop_regions[,2]*100000, na.rm = T)
+             ) #pogleda vrednosti v zadnjem stolpcu tabele Incidence/Umrljivosti in spravi najvecjo (rabimo za legendo)
 
              output$map_1 <- renderLeaflet({
                  leaflet(data = gadm) %>%
@@ -367,59 +358,46 @@ shinyApp(ui = ui,
                      setView(15, 46.07, zoom = 8)
              })
 
-             pal <- reactive(colorNumeric(palette = "YlGnBu", domain = dataPays()%>%select_if(is.numeric)))
-
+             # Potrebujemo razpon vrednosti za legendo:
+             pal <- reactive(colorNumeric(palette = "YlGnBu", domain = c(0,max(dataPays()[,ncol(dataPays())]/data_pop_regions[,2]*100000))))
+             
              observe({
-                 casesDeath <- ifelse(input$choices == "Groba incidencna stopnja","Groba incidencna stopnja","Groba umrljivostna stopnja")
-
-                 if (!is.null(input$day1)) {
-                     indicator <- format.Date(input$day1)
-                     # if (as.numeric(input$leto2[1]) < min(jourDate())){
-                     #     indicator2<-as.character(c(max(jourDate()),max(jourDate())))
-                     # }
-                     # else{
-                     #     indicator2<-as.character(c(input$leto2,input$leto2)) #vrne dve letnici
-                     # }
-                 }
-                 else{
-                     indicator = format.Date(max(jourDate))
-                     # indicator2 = as.character(c(min(jourDate()),max(jourDate())))
-                 }
+                 casesDeath <- ifelse(input$choices == "Število novih okužb", "Število novih okužb", "Število smrti")
                  
-                 if (!is.null(input$day2)) {
-                     indicator2 <- format.Date(input$day2-c(1,0))
+                 if (!is.null(input$obdobje)){
+                     indicator2 <- format.Date(input$obdobje)
                      
                  }else{
-                     indicator2 <- format.Date(c(min(jourDate)-1, max(jourDate)))
+                     indicator2 <- format.Date(c(max(jourDate)-6, max(jourDate)))
                  }
-                 
-                 # if(is.null(input$variable)){ # TOLE NE VEM ČE JE POTREBNO, MOGOČE PA LAHKO REŠI PROBLEM ZAČETNEGA PRIKAZA ZEMLJEVIDA....NI PA NUJNO
-                 #     
-                 # }else{
 
                  variable <- input$variable
+                 
                  dataPaysSel <- dataPays()%>%select(Regija,)
-                 # Naredili bomo nov stolpec ncases
-                 # st.let = (indicator2[2])-(indicator2[1])+1 # v resnici zdaj gledamo dneve, ne več let
-                 # vsota=0
-                 # for (k in 1:(indicator2[2]-indicator2[1])){
-                 #     vsota = vsota + dataPays()[,as.character(k)]} # k pretvorimo v character zato, da dobimo indeks
-
-                 dataPaysSel$ncases <- dataPays()[,3] # to je v resnici treba naredit tako, da gre po vseh izbranih stolpcih oz. samo po zadnjem izbranem...
-
+                 # Naredili bomo nov stolpec ncases, kjer so preračunane številke
+                 k1 <- which(colnames(dataPays())==as.character(as.Date(indicator2[1])-1)) # št. stolpca za prvi datum (-1 da dobimo številke tudi za prvi dan)
+                 k2 <- which(colnames(dataPays())==as.character(as.Date(indicator2[2]))) # št. stolpca za drugi datum
+                 tabela <- merge(dataPays()[,c(1, k1, k2)], data_pop_regions, by="Regija")
+                 # Združili smo prvi stolpec tabele (Regija), ter prvi in zadnji dan opazovanega obdobja ter št.preb.
+                 RelativnaPovprecja <- ((tabela[,3]-tabela[,2])*100000)/(tabela$population) # število novih okužb/smrti v zadnjih 7 dneh na 100.000 prebivalcev
+                 # 7-dnevna incidenca/število smrti na 100.000 prebivalcev po regijah
+                 RelativnaPovprecja <- RelativnaPovprecja[c(11, 9, 5, 1, 6, 7, 8, 2, 3, 10, 4, 12)] # popravimo vrstni red regij, ker ga melt spremeni
+                 dataPaysSel$ncases <- round(RelativnaPovprecja,0) # zaokrožimo na cela števila
+                 
                  regije2 <- merge(gadm,
                                   dataPaysSel,
                                   by.x = "NAME_1",
                                   by.y = "Regija",
                                   sort = FALSE)
+                 # Nastavimo, kaj se izpiše ob kliku na regijo:
                  regije_popup <- paste0("<strong>Regija: </strong>",
                                         regije2$NAME_1,
                                         "<br><strong>",
                                         casesDeath," v obdobju :",
                                         " </strong>",
-                                        format(regije2$ncases, big.mark = ".", decimal.mark = ","), " /100.000") #ncases z dataPaysSel
+                                        format(regije2$ncases, big.mark = ".", decimal.mark = ","), " /100.000")
 
-
+                 # Pobarvamo zemljevid:
                  leafletProxy("map_1", data = regije2)%>%
                      addPolygons(fillColor = pal()(regije2$ncases),
                                  fillOpacity = 1,
@@ -427,38 +405,62 @@ shinyApp(ui = ui,
                                  layerId = ~NAME_1,
                                  weight = 1,
                                  popup = regije_popup)
-             }# }
+             }
              )
 
              observe({
                  proxy <- leafletProxy("map_1", data = gadm)
                  # Legenda
-                 proxy %>% clearControls()
-
-                 proxy %>% addLegend(position = "bottomright",
-                                     pal = pal(), opacity = 1,
-                                     bins = seq(100,1000,100),
-                                     value = dataPays()%>%select_if(is.numeric),
-                                     data = dataPays()%>%select_if(is.numeric),
-                                     labFormat = labelFormat(prefix = " ", suffix = " /100.000")
-                                     # data je enako kot value. Ni toliko vazno, ce zacnemo pri 1 ali npr.3.
-                 )
+                 proxy %>% clearControls() # da se prejšnja legenda pobriše, če spremenimo npr. iz smrti v incidenco
+                 
+                 if(!is.null(input$choices)){
+                     if (input$choices == "Število novih okužb"){
+                         proxy %>% addLegend(position = "bottomright",
+                                             pal = pal(), opacity = 1,
+                                             bins = seq(0,12000,500),
+                                             value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
+                                             #data = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
+                                             labFormat = labelFormat(prefix = " ", suffix = " /100.000")
+                                             # data je enako kot value. Ni toliko vazno, ce zacnemo pri 1 ali npr.3.
+                                             )
+                         }
+                     else{
+                         proxy %>% addLegend(position = "bottomright",
+                                             pal = pal(), opacity = 1,
+                                             bins = seq(0,500,20),
+                                             value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
+                                             #data = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
+                                             labFormat = labelFormat(prefix = " ", suffix = " /100.000")
+                                             # data je enako kot value. Ni toliko vazno, ce zacnemo pri 1 ali npr.3.
+                                             )
+                         }
+                 }
+                 else{
+                     proxy %>% addLegend(position = "bottomright",
+                                         pal = pal(), opacity = 1,
+                                         bins = seq(0,12000,500),
+                                         value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
+                                         #data = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
+                                         labFormat = labelFormat(prefix = " ", suffix = " /100.000")
+                                         # data je enako kot value. Ni toliko vazno, ce zacnemo pri 1 ali npr.3.
+                     )
+                 }
              })
 
-             output$Slider<-renderUI({
-
-                 sliderInput("day2", "Datum ali obdobje", min(jourDate), max(jourDate), sep="",
-                             ticks = TRUE,
-                             value =  c(max(jourDate), max(jourDate)), animate = T, step = 1
-                             #kje zacnemo, ko odpremo aplikacijo
+             output$Slider <- renderUI({
+                 sliderInput("obdobje", "Izbrano obdobje opazovanja",
+                             min = as.Date(min(jourDate)+1, timeFormat="%Y-%m-%d"),
+                             max = as.Date(max(jourDate), timeFormat="%Y-%m-%d"), sep=" to ", ticks = TRUE,
+                             value =  c(as.Date(max(jourDate)-6, timeFormat="%Y-%m-%d"), as.Date(max(jourDate), timeFormat="%Y-%m-%d")),
+                             timeFormat="%Y-%m-%d", animate = T, step = 7
+                             # kje zacnemo, ko odpremo aplikacijo - pri zadnjem tednu
                  )
              })
-             
              
              # ----------------------------------------------------------------------------------------------------------------------
              
+             # STAROSTNE SKUPINE
              
-             # Porazdelitev po starosti
              data_starost <- reactive({
                  if(!is.null(input$starVar)){
                      if(input$starVar == "inc"){
@@ -513,3 +515,24 @@ shinyApp(ui = ui,
              
 })
 
+
+# -----------------------------------------------------------------------------------------------------------------------------------------------
+
+# Da malo preverim številke:
+# Shranimo zadnjih 8 dni in število prebivalcev skupaj
+# indicator2 <- format.Date(c(max(jourDate)-6, max(jourDate)))
+# 
+# k1 <- which(colnames(dataIncidenca)==as.character(as.Date(indicator2[1])-1)) # št. stolpca za prvi datum (-1 da dobimo številke tudi za prvi dan)
+# k2 <- which(colnames(dataIncidenca)==as.character(as.Date(indicator2[2]))) # št. stolpca za drugi datum
+# tabela <- merge(dataIncidenca[,c(1, k1, k2)], data_pop_regions, by="Regija")
+# # Združili smo prvi stolpec tabele (Regija), ter prvi in zadnji dan opazovanega obdobja ter št.preb.
+# RelativnaPovprecja <- ((tabela[,3]-tabela[,2])*100000)/(tabela$population)
+# cbind(tabela$Regija, RelativnaPovprecja)
+
+
+# # Še za število smrti:
+# tabela <- merge(dataUmrljivost[,c(1,(ncol(dataUmrljivost)-7):ncol(dataUmrljivost))], data_pop_regions, by="Regija")
+# RelativnaPovprecja <- ((tabela[,9]-tabela[,2])*100000)/(tabela$population) # število novih okužb v zadnjih 7 dneh na 100.000 prebivalcev
+# # 7-dnevna incidenca na 100.000 prebivalcev po regijah
+# smrti <- cbind(tabela$Regija, RelativnaPovprecja) # v zadnjem tednu ni bilo skoraj nič smrti
+# 
