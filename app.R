@@ -368,7 +368,7 @@ shinyApp(ui = ui,
                      indicator2 <- format.Date(input$obdobje)
                      
                  }else{
-                     indicator2 <- format.Date(c(max(jourDate)-6, max(jourDate)))
+                     indicator2 <- format.Date(c(max(jourDate)-13, max(jourDate)))
                  }
 
                  variable <- input$variable
@@ -451,8 +451,8 @@ shinyApp(ui = ui,
                  sliderInput("obdobje", "Izbrano obdobje opazovanja",
                              min = as.Date(min(jourDate)+1, timeFormat="%Y-%m-%d"),
                              max = as.Date(max(jourDate), timeFormat="%Y-%m-%d"), sep=" to ", ticks = TRUE,
-                             value =  c(as.Date(max(jourDate)-6, timeFormat="%Y-%m-%d"), as.Date(max(jourDate), timeFormat="%Y-%m-%d")),
-                             timeFormat="%Y-%m-%d", animate = T, step = 7
+                             value =  c(as.Date(max(jourDate)-13, timeFormat="%Y-%m-%d"), as.Date(max(jourDate), timeFormat="%Y-%m-%d")),
+                             timeFormat="%Y-%m-%d", animate = T, step = 14
                              # kje zacnemo, ko odpremo aplikacijo - pri zadnjem tednu
                  )
              })
