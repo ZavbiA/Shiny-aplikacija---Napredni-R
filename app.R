@@ -23,9 +23,12 @@ library(data.table) # za pretvorbo imen vrstic v prvi stolpec
 #------- import data --------
 #----------------------------
 
-# COVID
+# -----------------------------------------------------------------------------------------------------------------------------------------
+
+# STAROSTNE SKUPINE
+
+# Covid
 # Število umrlih glede na starostno skupino
-# Stats
 # Source: https://github.com/sledilnik/data/blob/master/csv/stats.csv
 data_all = read.csv("https://raw.githubusercontent.com/sledilnik/data/master/csv/stats.csv")
 data_all$date <- as.Date(data_all$date)
@@ -80,67 +83,6 @@ colnames(data_incidenca) <- c('0-14',
                          'Date')
 data_incidenca[is.na(data_incidenca)] <- 0
 
-# ---------------------------------------------------------------------------------------------------------------------------------------
-# --------
-# REGIJE
-# --------
-
-# Active: https://github.com/sledilnik/data/blob/master/csv/region-active.csv
-# Confirmed: https://github.com/sledilnik/data/blob/master/csv/region-confirmed.csv
-# Deceased: https://github.com/sledilnik/data/blob/master/csv/region-deceased.csv
-data_regions = read.csv("https://raw.githubusercontent.com/sledilnik/data/master/csv/region-cases.csv")
-data_regions$date <- as.Date(data_regions$date)
-
-# Uvozimo število prebivalcev po regijah
-data_pop_regions <- read.csv("https://raw.githubusercontent.com/sledilnik/data/master/csv/dict-region.csv")
-data_pop_regions <- data_pop_regions[-c(14,15),] # odstranimo zadnji dve vrstici, ker ju ne rabimo
-
-# Za izris zemljevida:
-gadm <- readRDS("Data/SVN.rds")
-# Da se znebimo šumnikov:
-regije <- c("Gorenjska", "Goriska", "Jugovzhodna Slovenija", "Koroska",
-            "Primorsko-notranjska", "Obalno-kraska", "Osrednjeslovenska",
-            "Podravska", "Pomurska", "Savinjska", "Posavska", "Zasavska")
-gadm$NAME_1 <- regije
-
-
-# UREJANJE TABEL ZA ZEMLJEVID:
-df2 <- data.frame(t(data_regions[-1])) # obrnemo tabelo (zamenjamo stolpce in vrstice)
-colnames(df2) <- data_regions[, 1] # imena stolpcev so datumi
-df2 <- df2[-c(seq(from=1, to=nrow(df2), by=3)), ] # za vsako regijo je prva vrstica neuporabna za našo aplikacijo (št.aktivnih primerov)
-df2 <- df2[-c(3,4,25,26), ] # odstranimo še podatke o tujcih in "unknown"
-
-razdeljeno <- str_extract_all(rownames(df2), "[a-z]+", simplify = TRUE) # naredimo matriko posameznih besed iz imen vrstic (regija, okuženi/umrli,...)
-razdeljeno <- razdeljeno[, c(2:3)] # rabimo samo te stolpce in samo te vrstice 
-imena <- paste(razdeljeno[,1], razdeljeno[,2], sep="_") # zdaj imamo shranjena imena vrstic za našo skupno tabelo
-rownames(df2) <- imena
-
-dataIncidenca <- df2[c(seq(from=1, to=nrow(df2), by=2)), ]
-dataUmrljivost <- df2[c(seq(from=2, to=nrow(df2), by=2)), ]
-rownames(dataIncidenca) <- regije[c(10, 11, 6, 1, 7, 8, 9, 2, 3, 5, 4, 12)] # uredimo imena vrstic (regij) in spotoma popravimo vrstni red
-dataIncidenca <- setDT(dataIncidenca, keep.rownames = TRUE)[] # imena vrstic pretvorimo v prvi stolpec
-colnames(dataIncidenca)[1] <- "Regija"
-rownames(dataUmrljivost) <- regije[c(10, 11, 6, 1, 7, 8, 9, 2, 3, 5, 4, 12)]
-dataUmrljivost <- setDT(dataUmrljivost, keep.rownames = TRUE)[]
-colnames(dataUmrljivost)[1] <- "Regija"
-
-dataIncidenca[is.na(dataIncidenca)] <- 0 # NA-je pretvorimo v ničle
-dataUmrljivost[is.na(dataUmrljivost)] <- 0
-dataIncidenca <- as.data.frame(dataIncidenca)
-dataIncidenca[2:ncol(dataIncidenca)] <- lapply(dataIncidenca[2:ncol(dataIncidenca)], as.numeric)
-dataUmrljivost <- as.data.frame(dataUmrljivost)
-dataUmrljivost[2:ncol(dataUmrljivost)] <- lapply(dataUmrljivost[2:ncol(dataUmrljivost)], as.numeric)
-
-dataPays <- function(data=dataIncidenca) return(data) # za kasneje
-jour <- names(dataIncidenca)[2:ncol(dataIncidenca)] # datumi so v obeh tabelah enaki
-jourDate <- as.Date(jour)
-names(dataIncidenca)[2:ncol(dataIncidenca)] <- format.Date(jourDate)
-names(dataUmrljivost)[2:ncol(dataUmrljivost)] <- format.Date(jourDate)
-
-arrondi <- function(x) 10^(ceiling(log10(x))) #za racunanje na populacijo (MOGOČE TO NE BO POTREBNO)
-
-# ---------------------------------------------------------------------------------------------------------------------------------------
-
 # Population
 # Absolutno število ljudi v starostni skupini
 # SURS https://www.stat.si/StatWeb/Field/Index/17/104
@@ -192,7 +134,69 @@ data_smrt_rel = data_smrt_rel %>%
     select('0-14',  '15-24', '25-34',
            '35-44', '45-54', '55-64',
            '65-74', '75-84', '85+',
+           
+           
            'Date')
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------
+
+# REGIJE
+
+# Active: https://github.com/sledilnik/data/blob/master/csv/region-active.csv
+# Confirmed: https://github.com/sledilnik/data/blob/master/csv/region-confirmed.csv
+# Deceased: https://github.com/sledilnik/data/blob/master/csv/region-deceased.csv
+data_regions = read.csv("https://raw.githubusercontent.com/sledilnik/data/master/csv/region-cases.csv") # vsi podatki skupaj
+data_regions$date <- as.Date(data_regions$date)
+
+# Uvozimo število prebivalcev po regijah
+data_pop_regions <- read.csv("https://raw.githubusercontent.com/sledilnik/data/master/csv/dict-region.csv")
+data_pop_regions <- data_pop_regions[-c(14,15),] # odstranimo zadnji dve vrstici, ker ju ne rabimo
+
+# Podatki za izris zemljevida:
+gadm <- readRDS("Data/SVN.rds")
+# Da se znebimo šumnikov:
+regije <- c("Gorenjska", "Goriska", "Jugovzhodna Slovenija", "Koroska",
+            "Primorsko-notranjska", "Obalno-kraska", "Osrednjeslovenska",
+            "Podravska", "Pomurska", "Savinjska", "Posavska", "Zasavska")
+gadm$NAME_1 <- regije
+
+# Urejanje tabel za zemljevid:
+df2 <- data.frame(t(data_regions[-1])) # obrnemo tabelo (zamenjamo stolpce in vrstice)
+colnames(df2) <- data_regions[, 1] # imena stolpcev so datumi
+df2 <- df2[-c(seq(from=1, to=nrow(df2), by=3)), ] # za vsako regijo je prva vrstica neuporabna za našo aplikacijo (št.aktivnih primerov)
+df2 <- df2[-c(3,4,25,26), ] # odstranimo še podatke o tujcih in "unknown"
+
+razdeljeno <- str_extract_all(rownames(df2), "[a-z]+", simplify = TRUE) # naredimo matriko posameznih besed iz imen vrstic (regija, okuženi/umrli,...)
+razdeljeno <- razdeljeno[, c(2:3)] # rabimo samo te stolpce in samo te vrstice 
+imena <- paste(razdeljeno[,1], razdeljeno[,2], sep="_") # zdaj imamo shranjena imena vrstic za našo skupno tabelo
+rownames(df2) <- imena
+
+dataIncidenca <- df2[c(seq(from=1, to=nrow(df2), by=2)), ]
+dataUmrljivost <- df2[c(seq(from=2, to=nrow(df2), by=2)), ]
+rownames(dataIncidenca) <- regije[c(10, 11, 6, 1, 7, 8, 9, 2, 3, 5, 4, 12)] # uredimo imena vrstic (regij) in spotoma popravimo vrstni red
+dataIncidenca <- setDT(dataIncidenca, keep.rownames = TRUE)[] # imena vrstic pretvorimo v prvi stolpec
+colnames(dataIncidenca)[1] <- "Regija"
+rownames(dataUmrljivost) <- regije[c(10, 11, 6, 1, 7, 8, 9, 2, 3, 5, 4, 12)]
+dataUmrljivost <- setDT(dataUmrljivost, keep.rownames = TRUE)[]
+colnames(dataUmrljivost)[1] <- "Regija"
+
+dataIncidenca[is.na(dataIncidenca)] <- 0 # NA-je pretvorimo v ničle
+dataUmrljivost[is.na(dataUmrljivost)] <- 0
+dataIncidenca <- as.data.frame(dataIncidenca)
+dataIncidenca[2:ncol(dataIncidenca)] <- lapply(dataIncidenca[2:ncol(dataIncidenca)], as.numeric)
+dataUmrljivost <- as.data.frame(dataUmrljivost)
+dataUmrljivost[2:ncol(dataUmrljivost)] <- lapply(dataUmrljivost[2:ncol(dataUmrljivost)], as.numeric)
+
+dataPays <- function(data=dataIncidenca) return(data) # za kasneje
+jour <- names(dataIncidenca)[2:ncol(dataIncidenca)] # datumi so v obeh tabelah enaki
+jourDate <- as.Date(jour)
+names(dataIncidenca)[2:ncol(dataIncidenca)] <- format.Date(jourDate)
+names(dataUmrljivost)[2:ncol(dataUmrljivost)] <- format.Date(jourDate)
+
+arrondi <- function(x) 10^(ceiling(log10(x))) #za racunanje na populacijo
+
+# ---------------------------------------------------------------------------------------------------------------------------------------
 
 #----------------------------
 #------  sidebar  -----------
@@ -250,7 +254,7 @@ body <- dashboardBody(
 
         ),
         
-        # STAROST
+        # STAROSTNE SKUPINE
         tabItem(tabName = "star",
                 fluidRow(
                     h2(align="center", "Umrljivost po starostnih skupinah relativno na populacijo")
