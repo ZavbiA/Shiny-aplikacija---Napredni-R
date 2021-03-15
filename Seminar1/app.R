@@ -195,8 +195,22 @@ data_pop_regions[c(3,11,12),1] <- c("Koroska", "Goriska", "Obalno-kraska")
 # Popravimo še vrstni red, da se ujema z drugimi tabelami:
 data_pop_regions <- data_pop_regions[c(4,6,12,9,8,2,1,11,7,10,3,5),]
 
+# Dodatno shranimo še največjo vsoto 14-dni za prilagajanje legende na zemljevidu
+vrednostInc <- 0
+tabelaInc <- data.frame()
+for (i in 15:ncol(dataIncidenca)){
+    tabelaInc <- rbind(tabelaInc, (dataIncidenca[,i]-dataIncidenca[,i-13])/data_pop_regions$population*100000)
+    vrednostInc <- max(max((dataIncidenca[,i]-dataIncidenca[,i-13])/data_pop_regions$population*100000), vrednostInc)
+}
+tabelaInc <- as.data.frame(t(tabelaInc))
 
-arrondi <- function(x) 10^(ceiling(log10(x))) #za legendo
+vrednostUmr <- 0
+tabelaUmr <- data.frame()
+for (i in 15:ncol(dataUmrljivost)){
+    tabelaUmr <- rbind(tabelaUmr, (dataUmrljivost[,i]-dataUmrljivost[,i-13])/data_pop_regions$population*100000)
+    vrednostUmr <- max(max((dataUmrljivost[,i]-dataUmrljivost[,i-13])/data_pop_regions$population*100000), vrednostUmr)
+}
+tabelaUmr <- as.data.frame(t(tabelaUmr))
 
 # ---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -344,7 +358,7 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
              
              # ZEMLJEVID
              
-             dataPays <- reactive({ # to je funkcija, ki vrača tabelo podatkov
+             dataPays <- reactive({ # to je funkcija, ki vrača celotno tabelo podatkov
                  if(!is.null(input$choices)){
                      if(input$choices == "Število novih okužb"){
                          return(dataIncidenca)
@@ -356,18 +370,31 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                      return(dataIncidenca) # privzeto opazujemo incidenco
                  }
              })
-
-             maxTotal <- reactive(max(dataPays()[,ncol(dataPays())]/data_pop_regions[,2]*100000, na.rm = T)
-             ) #pogleda vrednosti v zadnjem stolpcu tabele Incidence/Umrljivosti in spravi najvecjo (rabimo za legendo)
+             
+             dataPays1 <- reactive({ # to je funkcija, ki vrača tabelo podatkov za 14-dnevno obdobje
+                 if(!is.null(input$choices)){
+                     if(input$choices == "Število novih okužb"){
+                         return(tabelaInc)
+                         
+                     }else{
+                         return(tabelaUmr)
+                     }}
+                 else{
+                     return(tabelaInc) # privzeto opazujemo incidenco
+                 }
+             })
 
              output$map_1 <- renderLeaflet({
                  leaflet(data = gadm) %>%
                      # Nastavitev zacetnega prikaza (pozicija, velikost):
-                     setView(15, 46.07, zoom = 8)
+                     setView(15.2, 46.07, zoom = 8)
              })
-
+             
              # Potrebujemo razpon vrednosti za legendo:
-             pal <- reactive(colorNumeric(palette = "YlGnBu", domain = c(0,max(dataPays()[,ncol(dataPays())]/data_pop_regions[,2]*100000))))
+             pal <- reactive(colorNumeric(palette = "YlGnBu", domain = c(0, max(dataPays()[,ncol(dataPays())]/data_pop_regions[,2]*100000)+1))) # za daljše obdobje
+             # Če je izbrano obdobje do 14 dni, se legenda ustrezno prilagodi:
+             # Pogledamo vse 14-dnevne vsote in največjo vzamemo za mejo legende (smo shranili že pri urejanju podatkov)
+             pal1 <- reactive(colorNumeric(palette = "YlGnBu", domain = c(0, max(dataPays1()%>%select_if(is.numeric), na.rm = TRUE)+1))) # za krajše obdobje
              
              observe({
                  casesDeath <- ifelse(input$choices == "Število novih okužb", "Število novih okužb", "Število smrti")
@@ -391,6 +418,7 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                  RelativnaPovprecja <- ((tabela[,3]-tabela[,2])*100000)/(tabela$population) # število novih okužb/smrti v zadnjih 7 dneh na 100.000 prebivalcev
                  # 7-dnevna incidenca/število smrti na 100.000 prebivalcev po regijah
                  RelativnaPovprecja <- RelativnaPovprecja[c(11, 9, 5, 1, 6, 7, 8, 2, 3, 10, 4, 12)] # popravimo vrstni red regij, ker ga melt spremeni
+                 # PREVERI, ČE JE PRAVI VRSTNI RED!!!!!
                  dataPaysSel$ncases <- round(RelativnaPovprecja,0) # zaokrožimo na cela števila
                  
                  regije2 <- merge(gadm,
@@ -407,33 +435,68 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                                         format(regije2$ncases, big.mark = ".", decimal.mark = ","), " /100.000")
 
                  # Pobarvamo zemljevid:
-                 proxy <- leafletProxy("map_1", data = regije2) %>%
-                     addPolygons(fillColor = pal()(regije2$ncases),
-                                 fillOpacity = 1,
-                                 color = "#BDBDC3",
-                                 layerId = ~NAME_1,
-                                 weight = 1,
-                                 popup = regije_popup)  %>% clearControls()
-                 
-                 if(input$choices=="Število novih okužb"){ # če legenda ni izrisana
-                     # Legenda za število novih okužb:
-                     proxy %>% addLegend(position = "bottomright",
-                               pal = pal(), opacity = 1,
-                               bins = seq(0,12000,500),
-                               value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
-                               #data = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
-                               labFormat = labelFormat(prefix = " ", suffix = " /100.000")
-                               # data je enako kot value. Ni toliko vazno, ce zacnemo pri 1 ali npr.3.
-                               )
+                 if(dolzina>14){
+                     proxy <- leafletProxy("map_1", data = regije2) %>%
+                         addPolygons(fillColor = pal()(regije2$ncases),
+                                     fillOpacity = 1,
+                                     color = "#BDBDC3",
+                                     layerId = ~NAME_1,
+                                     weight = 1,
+                                     popup = regije_popup) %>% clearControls()
                  }
-                 else{
-                     proxy %>% addLegend(position = "bottomright",
-                                        pal = pal(), opacity = 1,
-                                        bins = seq(0,500,20),
-                                        value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
-                                        labFormat = labelFormat(prefix = " ", suffix = " /100.000"))
+                 else{ # če gledamo krajše obdobje, moramo drugače pobarvati zemljevid
+                     proxy <- leafletProxy("map_1", data = regije2) %>%
+                         addPolygons(fillColor = pal1()(regije2$ncases),
+                                     fillOpacity = 1,
+                                     color = "#BDBDC3",
+                                     layerId = ~NAME_1,
+                                     weight = 1,
+                                     popup = regije_popup) %>% clearControls()
                  }
                  
+                 
+                 if (dolzina>14){ # za dovolj dolgo izbrano obdobje
+                     if(input$choices=="Število novih okužb"){
+                         # Legenda za število novih okužb:
+                         proxy %>% addLegend(position = "bottomright",
+                                             pal = pal(), opacity = 1,
+                                             bins = seq(0,max(dataPays()[,ncol(dataPays())]/data_pop_regions[,2]*100000)+1,500),
+                                             value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
+                                             #data = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
+                                             labFormat = labelFormat(prefix = " ", suffix = " /100.000")
+                                             # data je enako kot value. Ni toliko vazno, ce zacnemo pri 1 ali npr.3.
+                         )
+                     }
+                     else{
+                         # In pa še legenda za število smrti:
+                         proxy %>% addLegend(position = "bottomright",
+                                             pal = pal(), opacity = 1,
+                                             bins = seq(0,max(dataPays()[,ncol(dataPays())]/data_pop_regions[,2]*100000)+1,20),
+                                             value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
+                                             labFormat = labelFormat(prefix = " ", suffix = " /100.000"))
+                     }
+                 }
+                 else{ # če je izbrano obdobje dolgo do 14 dni, prilagodimo skalo tabele, da se bolje razberejo razlike
+                     if(input$choices=="Število novih okužb"){
+                         # Legenda za število novih okužb:
+                         proxy %>% addLegend(position = "bottomright",
+                                             pal = pal1(), opacity = 1,
+                                             bins = seq(0,vrednostInc+1,200),
+                                             value = dataPays1()%>%select_if(is.numeric), # TO JE ZA POPRAVIT!
+                                             #data = dataPays()%>%select_if(is.numeric),
+                                             labFormat = labelFormat(prefix = " ", suffix = " /100.000")
+                                             # data je enako kot value. Ni toliko vazno, ce zacnemo pri 1 ali npr.3.
+                         )
+                     }
+                     else{
+                         # In pa še legenda za število smrti:
+                         proxy %>% addLegend(position = "bottomright",
+                                             pal = pal1(), opacity = 1,
+                                             bins = seq(0,vrednostUmr+1,10),
+                                             value = dataPays1()%>%select_if(is.numeric), # TO JE ZA POPRAVIT!
+                                             labFormat = labelFormat(prefix = " ", suffix = " /100.000"))
+                     }
+                 }
              }
              )
 
@@ -486,7 +549,7 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
              }
              )
 
-             output$grafStar<-renderPlot({
+             output$grafStar <- renderPlot({
                  input = as.Date(input$num)
                  Data = data_starost() # Izbira pravega df
                  Data = Data[Data$Date == input,] # Pravi datum
@@ -509,19 +572,18 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
              #     return(as.matrix(Data))
              # })
              
-             output$tabelaStar <- DT::renderDataTable(DT::datatable({
-                 input = as.Date(input$num)
-                 if(!is.null(input$starVar)){
-                     if(input$starVar == "inc"){
-                         Data <- data_incidenca_rel
-                         
-                     }else{
-                         Data <- data_smrt_rel
-                     }}
-                 Data = Data[Data$Date == input,]
-                 Data
-             }))
+             # output$tabelaStar <- DT::renderDataTable(DT::datatable({
+             #     input <- as.Date(input$num)
+             #     if(!is.null(input$starVar)){
+             #         if(input$starVar == "inc"){
+             #             Data <- data_incidenca_rel
+             #         }
+             #         else{
+             #             Data <- data_smrt_rel
+             #         }}
+             #     Data = Data[Data$Date == input,]
+             #     Data
+             # })) # ZAKOMENTIRALA SEM ZATO, DA MI NE MEČE OPOZORIL, KO PROBAVAM OSTALE STVARI
              
 })
-
 
