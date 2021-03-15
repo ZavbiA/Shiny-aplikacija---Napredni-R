@@ -8,15 +8,8 @@ library(dplyr)
 library(ggplot2)
 library(reshape) # za funkcijo melt
 library(sp) # za zemljevid
-# Naslednji paketi so za preverit, katere se res rabi (so za zemljevid, mogoče ne rabiva vseh)
-library(leaflet)
-library(RColorBrewer)
-library(rgdal)
-library(RCurl)
-library(plotly)
-library(viridis)
-library(tidyverse)
-library(stringr)
+library(leaflet) # za zemljevid
+library(stringr) # za extract_all
 library(data.table) # za pretvorbo imen vrstic v prvi stolpec
 
 #----------------------------
@@ -150,7 +143,7 @@ data_regions = read.csv("https://raw.githubusercontent.com/sledilnik/data/master
 data_regions$date <- as.Date(data_regions$date)
 
 # Podatki za izris zemljevida:
-gadm <- readRDS("Data/SVN.rds")
+gadm <- readRDS("SVN.rds")
 # Da se znebimo šumnikov:
 regije <- c("Gorenjska", "Goriska", "Jugovzhodna Slovenija", "Koroska",
             "Primorsko-notranjska", "Obalno-kraska", "Osrednjeslovenska",
@@ -430,9 +423,7 @@ shinyApp(ui = ui,
                                              pal = pal(), opacity = 1,
                                              bins = seq(0,500,20),
                                              value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
-                                             #data = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
                                              labFormat = labelFormat(prefix = " ", suffix = " /100.000")
-                                             # data je enako kot value. Ni toliko vazno, ce zacnemo pri 1 ali npr.3.
                                              )
                          }
                  }
@@ -517,23 +508,3 @@ shinyApp(ui = ui,
 })
 
 
-# -----------------------------------------------------------------------------------------------------------------------------------------------
-
-# Da malo preverim številke:
-# Shranimo zadnjih 8 dni in število prebivalcev skupaj
-# indicator2 <- format.Date(c(max(jourDate)-6, max(jourDate)))
-# 
-# k1 <- which(colnames(dataIncidenca)==as.character(as.Date(indicator2[1])-1)) # št. stolpca za prvi datum (-1 da dobimo številke tudi za prvi dan)
-# k2 <- which(colnames(dataIncidenca)==as.character(as.Date(indicator2[2]))) # št. stolpca za drugi datum
-# tabela <- merge(dataIncidenca[,c(1, k1, k2)], data_pop_regions, by="Regija")
-# # Združili smo prvi stolpec tabele (Regija), ter prvi in zadnji dan opazovanega obdobja ter št.preb.
-# RelativnaPovprecja <- ((tabela[,3]-tabela[,2])*100000)/(tabela$population)
-# cbind(tabela$Regija, RelativnaPovprecja)
-
-
-# # Še za število smrti:
-# tabela <- merge(dataUmrljivost[,c(1,(ncol(dataUmrljivost)-7):ncol(dataUmrljivost))], data_pop_regions, by="Regija")
-# RelativnaPovprecja <- ((tabela[,9]-tabela[,2])*100000)/(tabela$population) # število novih okužb v zadnjih 7 dneh na 100.000 prebivalcev
-# # 7-dnevna incidenca na 100.000 prebivalcev po regijah
-# smrti <- cbind(tabela$Regija, RelativnaPovprecja) # v zadnjem tednu ni bilo skoraj nič smrti
-# 
