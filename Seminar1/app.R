@@ -11,6 +11,7 @@ library(sp) # za zemljevid
 library(leaflet) # za zemljevid
 library(stringr) # za extract_all
 library(data.table) # za pretvorbo imen vrstic v prvi stolpec
+library(shinythemes)
 
 #----------------------------
 #------- import data --------
@@ -208,6 +209,7 @@ dashboardSidebar <- dashboardSidebar(
         menuItem("Starostne skupine", tabName = "star"),
         menuItem("Regije", tabName = "reg")
     )
+    
 )
 
 #----------------------------
@@ -215,13 +217,17 @@ dashboardSidebar <- dashboardSidebar(
 #----------------------------
 
 body <- dashboardBody(
+    # tags$head(tags$style(HTML(' .content-wrapper { background-color: lightblue; } .main-header .logo {
+    #     font-family: "Georgia", Times, "Times New Roman", serif;
+    #     font-weight: bold;
+    #     font-size: 24px;
+    #   }'))), # tukaj se lahko igramo z barvami in pisavo
     tabItems(
         
         # UVOD
         tabItem(tabName = "uvod",
                 fluidRow(
                     h2(align="center", "Uvod")
-                    
                 ),
                 fluidRow(
                     box(
@@ -257,7 +263,6 @@ body <- dashboardBody(
         tabItem(tabName = "star",
                 fluidRow(
                     h2(align="center", "Prikaz podatkov po starostnih skupinah")
-                    
                 ),
                 fluidRow(
                     box(status = "primary", width=4,
@@ -293,11 +298,12 @@ body <- dashboardBody(
                 fluidRow(
                     h2(align="center", "Prikaz podatkov po regijah")),
                 fluidRow(   
-                    box(status = "primary", width=4,  
+                    box(status = "primary", width=4,
                         selectInput("choices", "", choices = c("Število novih okužb", "Število smrti"),
                                     selected = "Število novih okužb"),
                         uiOutput("Slider"),
-                        helpText("Podrobnosti za vsako regijo se izpišejo ob kliku na izbrano regijo."), 
+                        helpText("Podrobnosti za vsako regijo se izpišejo ob kliku na izbrano regijo."),
+                        numericInput("n", "Izbrana dolžina skoka animacije", 10, min=1, max=365),
                         uiOutput("selection")),
                     box(status = "primary", width=8, leafletOutput("map_1", width = "100%", height = "600px"))),
                 fluidRow(
@@ -307,7 +313,6 @@ body <- dashboardBody(
                     )
                 )
         )
-        
     )
 )
 
@@ -316,6 +321,8 @@ body <- dashboardBody(
 #----------------------------
 
 ui <- dashboardPage(
+    # skin = "purple", # za nastavit aplikacijo
+    #theme = shinytheme("cosmo"), # to deluje samo pri fluidPage
     dashboardHeader(title = "Napredni R: Seminar 1"),
     dashboardSidebar,
     body
@@ -325,7 +332,7 @@ ui <- dashboardPage(
 #------- shiny app ----------
 #----------------------------
 
-shinyApp(ui = ui, 
+shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
          server = function(input, output, session) {
              
              # ZEMLJEVID
@@ -366,6 +373,7 @@ shinyApp(ui = ui,
                  }
 
                  variable <- input$variable
+                 dolzina <- as.Date(indicator2[2])-as.Date(indicator2[1]) # dolzina izbranega opazovanga obdobja
                  
                  dataPaysSel <- dataPays()%>%select(Regija,)
                  # Naredili bomo nov stolpec ncases, kjer so preračunane številke
@@ -392,59 +400,42 @@ shinyApp(ui = ui,
                                         format(regije2$ncases, big.mark = ".", decimal.mark = ","), " /100.000")
 
                  # Pobarvamo zemljevid:
-                 leafletProxy("map_1", data = regije2)%>%
+                 proxy <- leafletProxy("map_1", data = regije2) %>%
                      addPolygons(fillColor = pal()(regije2$ncases),
                                  fillOpacity = 1,
                                  color = "#BDBDC3",
                                  layerId = ~NAME_1,
                                  weight = 1,
-                                 popup = regije_popup)
-             }
-             )
-
-             observe({
-                 proxy <- leafletProxy("map_1", data = gadm)
-                 # Legenda
-                 proxy %>% clearControls() # da se prejšnja legenda pobriše, če spremenimo npr. iz smrti v incidenco
+                                 popup = regije_popup)  %>% clearControls()
                  
-                 if(!is.null(input$choices)){
-                     if (input$choices == "Število novih okužb"){
-                         proxy %>% addLegend(position = "bottomright",
-                                             pal = pal(), opacity = 1,
-                                             bins = seq(0,12000,500),
-                                             value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
-                                             #data = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
-                                             labFormat = labelFormat(prefix = " ", suffix = " /100.000")
-                                             # data je enako kot value. Ni toliko vazno, ce zacnemo pri 1 ali npr.3.
-                                             )
-                         }
-                     else{
-                         proxy %>% addLegend(position = "bottomright",
-                                             pal = pal(), opacity = 1,
-                                             bins = seq(0,500,20),
-                                             value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
-                                             labFormat = labelFormat(prefix = " ", suffix = " /100.000")
-                                             )
-                         }
+                 if(input$choices=="Število novih okužb"){ # če legenda ni izrisana
+                     # Legenda za število novih okužb:
+                     proxy %>% addLegend(position = "bottomright",
+                               pal = pal(), opacity = 1,
+                               bins = seq(0,12000,500),
+                               value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
+                               #data = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
+                               labFormat = labelFormat(prefix = " ", suffix = " /100.000")
+                               # data je enako kot value. Ni toliko vazno, ce zacnemo pri 1 ali npr.3.
+                               )
                  }
                  else{
                      proxy %>% addLegend(position = "bottomright",
-                                         pal = pal(), opacity = 1,
-                                         bins = seq(0,12000,500),
-                                         value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
-                                         #data = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
-                                         labFormat = labelFormat(prefix = " ", suffix = " /100.000")
-                                         # data je enako kot value. Ni toliko vazno, ce zacnemo pri 1 ali npr.3.
-                     )
+                                        pal = pal(), opacity = 1,
+                                        bins = seq(0,500,20),
+                                        value = dataPays()[,2:ncol(dataPays())]/data_pop_regions[,2]*100000,
+                                        labFormat = labelFormat(prefix = " ", suffix = " /100.000"))
                  }
-             })
+                 
+             }
+             )
 
              output$Slider <- renderUI({
                  sliderInput("obdobje", "Izbrano obdobje opazovanja",
                              min = as.Date(min(jourDate)+1, timeFormat="%Y-%m-%d"),
                              max = as.Date(max(jourDate), timeFormat="%Y-%m-%d"), sep=" to ", ticks = TRUE,
-                             value =  c(as.Date(max(jourDate)-13, timeFormat="%Y-%m-%d"), as.Date(max(jourDate), timeFormat="%Y-%m-%d")),
-                             timeFormat="%Y-%m-%d", animate = T, step = 14
+                             value =  c(as.Date(max(jourDate)-6, timeFormat="%Y-%m-%d"), as.Date(max(jourDate), timeFormat="%Y-%m-%d")),
+                             timeFormat="%Y-%m-%d", animate = T, step = input$n
                              # kje zacnemo, ko odpremo aplikacijo - pri zadnjem tednu
                  )
              })
