@@ -12,6 +12,8 @@ library(leaflet) # za zemljevid
 library(stringr) # za extract_all
 library(data.table) # za pretvorbo imen vrstic v prvi stolpec
 library(shinythemes)
+library(DT)
+
 
 #----------------------------
 #------- import data --------
@@ -287,6 +289,11 @@ body <- dashboardBody(
                 ),
                 fluidRow(
                     box(
+                        status = "primary", width=8,
+                        tableOutput(outputId = "tabelaStar"))
+                ),
+                fluidRow(
+                    box(
                         width = 12, status = "primary",
                         p("Graf prikazuje delež okuženih oziroma delež umrlih v starostni skupini glede na velikost starostne skupine v populaciji.")
                     )
@@ -494,7 +501,26 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                      coord_flip()+
                      theme_minimal()
              })
-
+             
+             # tabela <- reactive({
+             #     input = as.Date(input$num)
+             #     Data = data_starost() # Izbira pravega df
+             #     Data = Data[Data$Date == input,]
+             #     return(as.matrix(Data))
+             # })
+             
+             output$tabelaStar <- DT::renderDataTable(DT::datatable({
+                 input = as.Date(input$num)
+                 if(!is.null(input$starVar)){
+                     if(input$starVar == "inc"){
+                         Data <- data_incidenca_rel
+                         
+                     }else{
+                         Data <- data_smrt_rel
+                     }}
+                 Data = Data[Data$Date == input,]
+                 Data
+             }))
              
 })
 
