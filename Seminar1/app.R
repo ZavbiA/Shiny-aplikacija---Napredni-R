@@ -324,13 +324,14 @@ body <- dashboardBody(
                                     selected = "Število novih okužb"),
                         uiOutput("Slider"),
                         helpText("Podrobnosti za vsako regijo se izpišejo ob kliku na izbrano regijo."),
-                        numericInput("n", "Izbrana dolžina skoka animacije", 10, min=1, max=365),
+                        numericInput("n", "Izbrana dolžina skoka animacije", 7, min=1, max=365),
                         uiOutput("selection")),
                     box(status = "primary", width=8, leafletOutput("map_1", width = "100%", height = "600px"))),
                 fluidRow(
                     box(width = 12, status = "primary",
                         p("Graf privzeto prikazuje 7-dnevno incidenco na 100.000 prebivalcev po regijah.
-                          Namesto incidence lahko izberemo število smrti, poleg tega pa lahko spreminjamo tudi dolžino opazovanega obdobja.")
+                          Namesto incidence lahko izberemo število smrti, poleg tega pa lahko spreminjamo tudi dolžino opazovanega obdobja in velikost skoka animacije.
+                          Legenda se prilagodi glede na to, ali izberemo krajše (do 14 dni) ali daljše obdobje.")
                     )
                 )
         )
@@ -418,7 +419,6 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                  RelativnaPovprecja <- ((tabela[,3]-tabela[,2])*100000)/(tabela$population) # število novih okužb/smrti v zadnjih 7 dneh na 100.000 prebivalcev
                  # 7-dnevna incidenca/število smrti na 100.000 prebivalcev po regijah
                  RelativnaPovprecja <- RelativnaPovprecja[c(11, 9, 5, 1, 6, 7, 8, 2, 3, 10, 4, 12)] # popravimo vrstni red regij, ker ga melt spremeni
-                 # PREVERI, ČE JE PRAVI VRSTNI RED!!!!!
                  dataPaysSel$ncases <- round(RelativnaPovprecja,0) # zaokrožimo na cela števila
                  
                  regije2 <- merge(gadm,
