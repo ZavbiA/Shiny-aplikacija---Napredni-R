@@ -278,7 +278,8 @@ body <- dashboardBody(
                             label = "Datum:",
                             value = as.Date('2020-02-24',"%Y-%m-%d"),
                             min = as.Date('2020-02-24',"%Y-%m-%d"),
-                            max = as.Date(Sys.Date()-7), # Alternativa: Sys.Date()
+                            max = as.Date('2021-03-07',"%Y-%m-%d"),
+                            #max = as.Date(Sys.Date()-7), # Alternativa: Sys.Date()
                             timeFormat = "%Y-%m-%d",
                             animate = animationOptions(interval = 200))
                     ),
@@ -501,7 +502,7 @@ shinyApp(ui = ui,
                  Data = data_starost() # Izbira pravega df
                  Data = Data[Data$Date == input,] # Pravi datum
                  Data = select(Data, -Date) # Samo še številke, brez datuma
-                 Data <- melt(Data, id=c()) # Preoblikovanje za ggplot
+                 Data <- reshape::melt(Data, id=c()) # Preoblikovanje za ggplot
                  
                  ggplot(data = Data, aes(x = variable, y = value)) +
                      geom_col(fill='#2c7fb8') +
