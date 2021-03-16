@@ -216,26 +216,23 @@ if (is.na(data_all[nrow(data_all),5])){
     j <- as.numeric(nrow(data_all)-1)
 }
 
-ind()
-
-datum <- as.numeric(data_all[j,2])
+datum <- format(data_all[j,2], "%d.%m.%Y")
 aktivni <- as.numeric(data_all[j,22])
 
-naslovi <- c("število izvedenih testov", "število potrjenih primerov", "število smrti", "delež pozitivnih testov")
-številke1 <- c(as.numeric(data_all[j,5]), as.numeric(data_all[j,21]), as.numeric(data_all[j,34]-data_all[j-1,34]),
+naslovi <- c("število opravljenih PCR testov", "število potrjenih primerov", "število smrti", "delež pozitivnih testov")
+stevilke1 <- c(as.numeric(data_all[j,5]), as.numeric(data_all[j,21]), as.numeric(data_all[j,34]-data_all[j-1,34]),
                round(as.numeric(data_all[j,21])/as.numeric(data_all[j,5]),2))
-številke7 <- c(as.numeric(data_all[j,4]-data_all[j-7,4]), as.numeric(data_all[j,20])-as.numeric(data_all[j-7,20]),
-               as.numeric(data_all[j,34]-data_all[j-7,34]), round(as.numeric(data_all[j,20])-as.numeric(data_all[j-7,20])/as.numeric(data_all[j,4]-data_all[j-7,4]),2))
-številke14 <- c(as.numeric(data_all[j,4]-data_all[j-14,4]), as.numeric(data_all[j,20])-as.numeric(data_all[j-14,20]),
-                as.numeric(data_all[j,34]-data_all[j-14,34]), round(as.numeric(data_all[j,20])-as.numeric(data_all[j-14,20])/as.numeric(data_all[j,4]-data_all[j-14,4]),2))
-številkeAll <- c(as.numeric(data_all[j,4]), as.numeric(data_all[j,20]),
+stevilke7 <- c(as.numeric(data_all[j,4]-data_all[j-7,4]), as.numeric(data_all[j,20])-as.numeric(data_all[j-7,20]),
+               as.numeric(data_all[j,34]-data_all[j-7,34]), round((as.numeric(data_all[j,20])-as.numeric(data_all[j-7,20]))/as.numeric(data_all[j,4]-data_all[j-7,4]),2))
+stevilke14 <- c(as.numeric(data_all[j,4]-data_all[j-14,4]), as.numeric(data_all[j,20])-as.numeric(data_all[j-14,20]),
+                as.numeric(data_all[j,34]-data_all[j-14,34]), round((as.numeric(data_all[j,20])-as.numeric(data_all[j-14,20]))/as.numeric(data_all[j,4]-data_all[j-14,4]),2))
+stevilkeAll <- c(as.numeric(data_all[j,4]), as.numeric(data_all[j,20]),
                  as.numeric(data_all[j,34]), round(as.numeric(data_all[j,20])/as.numeric(data_all[j,4]),2))
 
-tabela1 <- cbind(naslovi, številke1)
-tabela7 <- cbind(naslovi, številke7)
-#colnames(tabela7) <- FALSE
-tabela14 <- cbind(naslovi, številke14)
-tabelaAll <- cbind(naslovi, številkeAll)
+tabela1 <- cbind(naslovi, stevilke1)
+tabela7 <- cbind(naslovi, stevilke7)
+tabela14 <- cbind(naslovi, stevilke14)
+tabelaAll <- cbind(naslovi, stevilkeAll)
 # -------------------------------------------------------------------------------------------------------------------------------------------
 
 #----------------------------
@@ -282,34 +279,28 @@ body <- dashboardBody(
                           <p>
                           V zavihku 'Regije' je izrisan zemljevid, ki prikazuje število vseh potrjenih primerov okužbe (ali število vseh smrti) glede na število prebivalcev slovenskih statističnih regij.
                           Podatki o številu prebivalcev po regijah so prav tako dostopni na repozitoriju projekta <a href='https://github.com/sledilnik/data'>Sledilnik</a>.
+                          </p>
+                          Za začetek pa si v spodnjem okencu lahko pogledamo nekaj najbolj osnovnih podatkov za Slovenijo. Celotno obdobje zajema čas od pojava prvega primera okužbe do zadnjih dostopnih podatkov.
                           </p>"))
                     )
                 ),
                 
                 
                 fluidRow( # Dodatno za prikaz osnovnih podatkov z gumbi
-                    box(status = "success", width=5, 
+                    box(status = "success", width=4, 
                     radioButtons("basic", label = h3("Izbira obdobja"),
                                  choices = list("Zadnji dan", "Zadnjih 7 dni", "Zadnjih 14 dni", "Celotno obdobje"), 
                                  selected = 1),
                     hr(),
-                    # fluidRow(column(4, verbatimTextOutput("vrednost")))
+                    textOutput("vrednost"),
+                    hr(),
                     tableOutput(outputId = "tabelaVse")
-                    ),
-                    # verbatimTextOutput("code1"),
-                    # verbatimTextOutput("code2"),
-                    # valueBoxOutput("incidenca"),
-                    # valueBoxOutput("akutni"),
-                    # valueBoxOutput("smrti"),
-                    # valueBoxOutput("cepljeni")
-                    
+                    )
                 )
                 
                 # Če želimo dodati slike na uvodno stran:
                 
                 # fluidRow(
-                #     box(width = 4, status = "primary",
-                #         img(src="incidenca.jpg", align = "center", width="100%")),
                 #     box(width = 4, status = "primary",
                 #         img(src="prezivetje.jpg", align = "center", width="100%")),
                 #     box(width = 4, status = "primary",
@@ -389,7 +380,6 @@ body <- dashboardBody(
 
 ui <- dashboardPage(
     skin = "green", # za nastavit barvo zgornjega dela
-    #theme = shinytheme("cosmo"), # to deluje samo pri fluidPage
     dashboardHeader(title = "Covid-19 v Sloveniji"),
     dashboardSidebar,
     body
@@ -403,13 +393,9 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
          server = function(input, output, session) {
              
              # UVOD
-            # output$vrednost <- renderPrint({ input$basic })
-            # output$code1 <- renderPrint({ 
-            #     "Število potrjenih okužb znaša"
-            # })
-            # output$code2 <- renderPrint({ 
-            #     "Število smrti znaša"
-            # })
+            output$vrednost <- renderText({ 
+                paste("Podatki so dostopni do", datum, ".")
+            })
             
             data_vse <- reactive({
                 if(!is.null(input$basic)){
@@ -425,9 +411,6 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                     else{
                         return(tabelaAll)
                     }}
-                else{
-                    
-                }
             })
             
             output$tabelaVse <- renderTable({
@@ -560,7 +543,7 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                          proxy %>% addLegend(position = "bottomright",
                                              pal = pal1(), opacity = 1,
                                              bins = seq(0,vrednostInc+1,200),
-                                             value = dataPays1()%>%select_if(is.numeric), # TO JE ZA POPRAVIT!
+                                             value = dataPays1()%>%select_if(is.numeric),
                                              #data = dataPays()%>%select_if(is.numeric),
                                              labFormat = labelFormat(prefix = " ", suffix = " /100.000")
                                              # data je enako kot value. Ni toliko vazno, ce zacnemo pri 1 ali npr.3.
@@ -571,7 +554,7 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                          proxy %>% addLegend(position = "bottomright",
                                              pal = pal1(), opacity = 1,
                                              bins = seq(0,vrednostUmr+1,10),
-                                             value = dataPays1()%>%select_if(is.numeric), # TO JE ZA POPRAVIT!
+                                             value = dataPays1()%>%select_if(is.numeric),
                                              labFormat = labelFormat(prefix = " ", suffix = " /100.000"))
                      }
                  }
@@ -650,24 +633,4 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                  Data
              })
 })
-
-# ---------------------------------------------------------------------------------------------------------------------------------------------
-# ZA CELOTNO SLOVENIJO
-
-# pozitivni1 <- as.numeric(data_all[j,21]) # cases confirmed (tako kot država sporoča, ne glede na HAGT in druge)
-# testi1 <- as.numeric(data_all[j,5])
-# smrti1 <- as.numeric(data_all[j,34]-data_all[j-1,34])
-# 
-# pozitivni7 <- as.numeric(data_all[j,20])-as.numeric(data_all[j-7,20]) # cases confirmed (tako kot država sporoča, ne glede na HAGT in druge)
-# testi7 <- as.numeric(data_all[j,4]-data_all[j-7,4])
-# smrti7 <- as.numeric(data_all[j,34]-data_all[j-7,34])
-# 
-# pozitivni14 <- as.numeric(data_all[j,20])-as.numeric(data_all[j-14,20]) # cases confirmed (tako kot država sporoča, ne glede na HAGT in druge)
-# testi14 <- as.numeric(data_all[j,4]-data_all[j-14,4])
-# smrti14 <- as.numeric(data_all[j,34]-data_all[j-14,34])
-# 
-# pozitivniAll <- as.numeric(data_all[j,20]) # vsi pozitivni testi
-# testiAll <- as.numeric(data_all[j,4]) # vsi izvedeni testi
-# smrtiAll <- as.numeric(data_all[j,34]) # število vseh umrlih
-
 
