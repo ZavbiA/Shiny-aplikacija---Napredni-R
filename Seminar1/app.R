@@ -11,9 +11,7 @@ library(sp) # za zemljevid
 library(leaflet) # za zemljevid
 library(stringr) # za extract_all
 library(data.table) # za pretvorbo imen vrstic v prvi stolpec
-library(shinythemes)
-library(DT)
-
+library(DT) # pri urejanju tabel
 
 #----------------------------
 #------- import data --------
@@ -131,9 +129,7 @@ data_smrt_rel = data_smrt_rel %>%
            '35-44', '45-54', '55-64',
            '65-74', '75-84', '85+',
            
-           
            'Date')
-
 
 # ---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -225,7 +221,6 @@ dashboardSidebar <- dashboardSidebar(
         menuItem("Starostne skupine", tabName = "star"),
         menuItem("Regije", tabName = "reg")
     )
-    
 )
 
 #----------------------------
@@ -250,6 +245,7 @@ body <- dashboardBody(
                         width = 12, status = "primary",
                         # znak <br/> je za skok v novo vrstico, znak <p> pa za prazno vrstico
                         p(HTML("<p>V sklopu predmeta 'Napredni pristopi v programskem okolju R' sva pripravila dve različni vizualizaciji podatkov, povezanih z boleznijo Covid-19 v Sloveniji.  
+                          Z aplikacijo želiva podatke prikazati na način, ki drugje še ni uporabljen in s tem omogočiti še boljši pregled oz. analizo podatkov.
                           Podatki se berejo neposredno iz podatkovnega repozitorija projekta <a href='https://github.com/sledilnik/data'>Sledilnik</a>.
                           <p>
                           Prvi graf predstavlja delež okuženega prebivalstva (ali delež umrlega prebivalstva) po starostnih skupinah.
@@ -309,7 +305,9 @@ body <- dashboardBody(
                 fluidRow(
                     box(
                         width = 12, status = "primary",
-                        p("Graf prikazuje delež okuženih oziroma delež umrlih v starostni skupini glede na velikost starostne skupine v populaciji.")
+                        p("Graf prikazuje delež potrjenih okužb oziroma delež umrlih po starostnih skupinah glede na velikosti starostnih skupin v populaciji.
+                          Zavedati se je potrebno, da se testi po starostnih skupinah niso izjavali enako pogosto, zato moramo bili bolj previdni pri interpretaciji.
+                          Ker je pri otrocih potek bolezni (običajno) blažji kot pri starejših, se posledično več testov izvaja pri starejši, torej bolj ogroženi populaciji.")
                     )
                 )
         ),
@@ -345,7 +343,7 @@ body <- dashboardBody(
 ui <- dashboardPage(
     # skin = "purple", # za nastavit aplikacijo
     #theme = shinytheme("cosmo"), # to deluje samo pri fluidPage
-    dashboardHeader(title = "Napredni R: Seminar 1"),
+    dashboardHeader(title = "Covid-19 v Sloveniji"),
     dashboardSidebar,
     body
 )
@@ -586,4 +584,21 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
              # })) # ZAKOMENTIRALA SEM ZATO, DA MI NE MEČE OPOZORIL, KO PROBAVAM OSTALE STVARI
              
 })
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------
+
+# Katere podatke še lahko predstaviva?
+
+# ZA CELOTNO SLOVENIJO
+
+
+
+# CEPLJENJE
+
+
+
+# OPRAVLJENO ŠTEVILO TESTOV IN DELEŽ POZITIVNIH?
+
+
+
 
