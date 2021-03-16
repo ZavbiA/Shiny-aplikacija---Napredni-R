@@ -239,10 +239,11 @@ body <- dashboardBody(
         tabItem(tabName = "uvod",
                 fluidRow(
                     h2(align="center", "Uvod")
-                ),
+                ), 
                 fluidRow(
                     box(
-                        width = 12, status = "primary",
+                        #background = "light-blue", za nastavit barvo ozadja okenca
+                        status = "success", width = 12, #solidHeader = TRUE, #fluidRow(status="warning", outline = FALSE, inline = TRUE),
                         # znak <br/> je za skok v novo vrstico, znak <p> pa za prazno vrstico
                         p(HTML("<p>V sklopu predmeta 'Napredni pristopi v programskem okolju R' sva pripravila dve različni vizualizaciji podatkov, povezanih z boleznijo Covid-19 v Sloveniji.  
                           Z aplikacijo želiva podatke prikazati na način, ki drugje še ni uporabljen in s tem omogočiti še boljši pregled oz. analizo podatkov.
@@ -273,11 +274,13 @@ body <- dashboardBody(
         
         # STAROSTNE SKUPINE
         tabItem(tabName = "star",
+                
                 fluidRow(
                     h2(align="center", "Prikaz podatkov po starostnih skupinah")
                 ),
+                
                 fluidRow(
-                    box(status = "primary", width=4,
+                    box(status = "success", width=4, # s statusom spreminjamo barvo okvirja
                         selectInput(
                             "starVar",
                             "Izbira relativne statistike:",
@@ -293,19 +296,16 @@ body <- dashboardBody(
                             timeFormat = "%Y-%m-%d",
                             animate = animationOptions(interval = 200))
                     ),
-                    box(
-                        status = "primary", width=8,
-                        plotOutput(outputId = "grafStar"))
+                    box(status = "success", width=7,
+                        plotOutput(outputId = "grafStar")),
+                    box(status = "success", width=5, title="Vrednosti na izbrani datum:",
+                        tableOutput(outputId = "tabelaStar")),
                 ),
+                
                 fluidRow(
-                    box(
-                        status = "primary", width=8,
-                        tableOutput(outputId = "tabelaStar"))
-                ),
-                fluidRow(
-                    box(
-                        width = 12, status = "primary",
+                    box(width = 12, status = "success",
                         p("Graf prikazuje delež potrjenih okužb oziroma delež umrlih po starostnih skupinah glede na velikosti starostnih skupin v populaciji.
+                          Poleg je tabela, iz katere lahko razberemo konkretne številke na izbrani datum.
                           Zavedati se je potrebno, da se testi po starostnih skupinah niso izjavali enako pogosto, zato moramo bili bolj previdni pri interpretaciji.
                           Ker je pri otrocih potek bolezni (običajno) blažji kot pri starejših, se posledično več testov izvaja pri starejši, torej bolj ogroženi populaciji.")
                     )
@@ -317,16 +317,16 @@ body <- dashboardBody(
                 fluidRow(
                     h2(align="center", "Prikaz podatkov po regijah")),
                 fluidRow(   
-                    box(status = "primary", width=4,
+                    box(status = "success", width=4,
                         selectInput("choices", "", choices = c("Število novih okužb", "Število smrti"),
                                     selected = "Število novih okužb"),
                         uiOutput("Slider"),
                         helpText("Podrobnosti za vsako regijo se izpišejo ob kliku na izbrano regijo."),
                         numericInput("n", "Izbrana dolžina skoka animacije", 7, min=1, max=365),
                         uiOutput("selection")),
-                    box(status = "primary", width=8, leafletOutput("map_1", width = "100%", height = "600px"))),
+                    box(status = "success", width=8, leafletOutput("map_1", width = "100%", height = "600px"))),
                 fluidRow(
-                    box(width = 12, status = "primary",
+                    box(width = 12, status = "success",
                         p("Graf privzeto prikazuje 7-dnevno incidenco na 100.000 prebivalcev po regijah.
                           Namesto incidence lahko izberemo število smrti, poleg tega pa lahko spreminjamo tudi dolžino opazovanega obdobja in velikost skoka animacije.
                           Legenda se prilagodi glede na to, ali izberemo krajše (do 14 dni) ali daljše obdobje.")
@@ -341,7 +341,7 @@ body <- dashboardBody(
 #----------------------------
 
 ui <- dashboardPage(
-    # skin = "purple", # za nastavit aplikacijo
+    skin = "green", # za nastavit barvo zgornjega dela
     #theme = shinytheme("cosmo"), # to deluje samo pri fluidPage
     dashboardHeader(title = "Covid-19 v Sloveniji"),
     dashboardSidebar,
@@ -544,8 +544,7 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
 
              observeEvent(input$starVar,{
                  print(input$starVar)
-             }
-             )
+             })
 
              output$grafStar <- renderPlot({
                  input = as.Date(input$num)
@@ -563,26 +562,13 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                      theme_minimal()
              })
              
-             # tabela <- reactive({
-             #     input = as.Date(input$num)
-             #     Data = data_starost() # Izbira pravega df
-             #     Data = Data[Data$Date == input,]
-             #     return(as.matrix(Data))
-             # })
-             
-             # output$tabelaStar <- DT::renderDataTable(DT::datatable({
-             #     input <- as.Date(input$num)
-             #     if(!is.null(input$starVar)){
-             #         if(input$starVar == "inc"){
-             #             Data <- data_incidenca_rel
-             #         }
-             #         else{
-             #             Data <- data_smrt_rel
-             #         }}
-             #     Data = Data[Data$Date == input,]
-             #     Data
-             # })) # ZAKOMENTIRALA SEM ZATO, DA MI NE MEČE OPOZORIL, KO PROBAVAM OSTALE STVARI
-             
+             output$tabelaStar <- renderTable({
+                 input = as.Date(input$num)
+                 Data = data_starost() # Izbira pravega df
+                 Data = Data[Data$Date == input,] # na izbrani datum
+                 Data = select(Data, -Date) # brez datuma
+                 Data
+             })
 })
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------
