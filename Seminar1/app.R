@@ -194,17 +194,17 @@ data_pop_regions <- data_pop_regions[c(4,6,12,9,8,2,1,11,7,10,3,5),]
 # Dodatno shranimo še največjo vsoto 14-dni za prilagajanje legende na zemljevidu
 vrednostInc <- 0
 tabelaInc <- data.frame()
-for (i in 15:ncol(dataIncidenca)){
-    tabelaInc <- rbind(tabelaInc, (dataIncidenca[,i]-dataIncidenca[,i-13])/data_pop_regions$population*100000)
-    vrednostInc <- max(max((dataIncidenca[,i]-dataIncidenca[,i-13])/data_pop_regions$population*100000), vrednostInc)
+for (i in 16:ncol(dataIncidenca)){
+    tabelaInc <- rbind(tabelaInc, (dataIncidenca[,i]-dataIncidenca[,i-14])*100000/data_pop_regions$population)
+    vrednostInc <- max(max((dataIncidenca[,i]-dataIncidenca[,i-14])*100000/data_pop_regions$population), vrednostInc)
 }
 tabelaInc <- as.data.frame(t(tabelaInc))
 
 vrednostUmr <- 0
 tabelaUmr <- data.frame()
-for (i in 15:ncol(dataUmrljivost)){
-    tabelaUmr <- rbind(tabelaUmr, (dataUmrljivost[,i]-dataUmrljivost[,i-13])/data_pop_regions$population*100000)
-    vrednostUmr <- max(max((dataUmrljivost[,i]-dataUmrljivost[,i-13])/data_pop_regions$population*100000), vrednostUmr)
+for (i in 16:ncol(dataUmrljivost)){
+    tabelaUmr <- rbind(tabelaUmr, (dataUmrljivost[,i]-dataUmrljivost[,i-14])*100000/data_pop_regions$population)
+    vrednostUmr <- max(max((dataUmrljivost[,i]-dataUmrljivost[,i-14])*100000/data_pop_regions$population), vrednostUmr)
 }
 tabelaUmr <- as.data.frame(t(tabelaUmr))
 
@@ -220,14 +220,14 @@ datum <- format(data_all[j,2], "%d.%m.%Y")
 aktivni <- as.numeric(data_all[j,22])
 
 naslovi <- c("število opravljenih PCR testov", "število potrjenih primerov", "število smrti", "delež pozitivnih testov")
-stevilke1 <- c(as.numeric(data_all[j,5]), as.numeric(data_all[j,21]), as.numeric(data_all[j,34]-data_all[j-1,34]),
+stevilke1 <- c(as.numeric(data_all[j,5]), as.numeric(data_all[j,21]), as.numeric(data_all[j+1,34]-data_all[j,34]), # pri smrtih je v tabeli zamaknjena vrstica!!
                round(as.numeric(data_all[j,21])/as.numeric(data_all[j,5]),2))
 stevilke7 <- c(as.numeric(data_all[j,4]-data_all[j-7,4]), as.numeric(data_all[j,20])-as.numeric(data_all[j-7,20]),
-               as.numeric(data_all[j,34]-data_all[j-7,34]), round((as.numeric(data_all[j,20])-as.numeric(data_all[j-7,20]))/as.numeric(data_all[j,4]-data_all[j-7,4]),2))
+               as.numeric(data_all[j+1,34]-data_all[j-6,34]), round((as.numeric(data_all[j,20])-as.numeric(data_all[j-7,20]))/as.numeric(data_all[j,4]-data_all[j-7,4]),2))
 stevilke14 <- c(as.numeric(data_all[j,4]-data_all[j-14,4]), as.numeric(data_all[j,20])-as.numeric(data_all[j-14,20]),
-                as.numeric(data_all[j,34]-data_all[j-14,34]), round((as.numeric(data_all[j,20])-as.numeric(data_all[j-14,20]))/as.numeric(data_all[j,4]-data_all[j-14,4]),2))
+                as.numeric(data_all[j+1,34]-data_all[j-13,34]), round((as.numeric(data_all[j,20])-as.numeric(data_all[j-14,20]))/as.numeric(data_all[j,4]-data_all[j-14,4]),2))
 stevilkeAll <- c(as.numeric(data_all[j,4]), as.numeric(data_all[j,20]),
-                 as.numeric(data_all[j,34]), round(as.numeric(data_all[j,20])/as.numeric(data_all[j,4]),2))
+                 as.numeric(data_all[j+1,34]), round(as.numeric(data_all[j,20])/as.numeric(data_all[j,4]),2))
 
 tabela1 <- cbind(naslovi, stevilke1)
 tabela7 <- cbind(naslovi, stevilke7)
@@ -456,7 +456,7 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
              pal <- reactive(colorNumeric(palette = "YlGnBu", domain = c(0, max(dataPays()[,ncol(dataPays())]/data_pop_regions[,2]*100000)+1))) # za daljše obdobje
              # Če je izbrano obdobje do 14 dni, se legenda ustrezno prilagodi:
              # Pogledamo vse 14-dnevne vsote in največjo vzamemo za mejo legende (smo shranili že pri urejanju podatkov)
-             pal1 <- reactive(colorNumeric(palette = "YlGnBu", domain = c(0, max(dataPays1()%>%select_if(is.numeric), na.rm = TRUE)+1))) # za krajše obdobje
+             pal1 <- reactive(colorNumeric(palette = "YlGnBu", domain = c(0, max(dataPays1()%>%select_if(is.numeric)+1, na.rm = TRUE)))) # za krajše obdobje
              
              observe({
                  casesDeath <- ifelse(input$choices == "Število novih okužb", "Število novih okužb", "Število smrti")
@@ -469,7 +469,7 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                  }
 
                  variable <- input$variable
-                 dolzina <- as.Date(indicator2[2])-as.Date(indicator2[1]) # dolzina izbranega opazovanga obdobja
+                 dolzina <- as.Date(indicator2[2])-as.Date(indicator2[1])+1 # dolzina izbranega opazovanga obdobja
                  
                  dataPaysSel <- dataPays()%>%select(Regija,)
                  # Naredili bomo nov stolpec ncases, kjer so preračunane številke
@@ -542,7 +542,7 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                          # Legenda za število novih okužb:
                          proxy %>% addLegend(position = "bottomright",
                                              pal = pal1(), opacity = 1,
-                                             bins = seq(0,vrednostInc+1,200),
+                                             bins = seq(0, vrednostInc+1, 200),
                                              value = dataPays1()%>%select_if(is.numeric),
                                              #data = dataPays()%>%select_if(is.numeric),
                                              labFormat = labelFormat(prefix = " ", suffix = " /100.000")
@@ -553,7 +553,7 @@ shinyApp(ui = ui, #fluidPage(theme = shinytheme("cosmo")),
                          # In pa še legenda za število smrti:
                          proxy %>% addLegend(position = "bottomright",
                                              pal = pal1(), opacity = 1,
-                                             bins = seq(0,vrednostUmr+1,10),
+                                             bins = seq(0, vrednostUmr+1, 10),
                                              value = dataPays1()%>%select_if(is.numeric),
                                              labFormat = labelFormat(prefix = " ", suffix = " /100.000"))
                      }
